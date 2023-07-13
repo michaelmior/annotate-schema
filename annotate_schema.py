@@ -68,6 +68,7 @@ def main():
         default="jsonschema",
         choices=["jsonschema", "typescript", "zod"],
     )
+    parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1-3b")
     args = parser.parse_args()
 
     json_str = sys.stdin.read()
@@ -78,13 +79,13 @@ def main():
     # Load model
     sys.stderr.write("Loading model…\n")
     model = AutoModelForCausalLM.from_pretrained(
-        "replit/replit-code-v1-3b", trust_remote_code=True
+        args.model, trust_remote_code=True, device_map="auto"
     )
 
     # load tokenizer
     sys.stderr.write("Loading tokenizer…\n")
     tokenizer = AutoTokenizer.from_pretrained(
-        "replit/replit-code-v1-3b", trust_remote_code=True
+        args.model, trust_remote_code=True, device_map="auto"
     )
 
     sys.stderr.write("Generating descriptions…\n")
