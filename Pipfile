@@ -11,6 +11,7 @@ transformers = "*"
 jsonpath-ng = "*"
 tqdm = "*"
 accelerate = "*"
+tiktoken = "*"
 
 [dev-packages]
 
