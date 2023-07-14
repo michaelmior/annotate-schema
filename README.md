@@ -30,3 +30,33 @@ To run with your own schema, provide it on standard input.
 The resulting schema with descriptions is written to standard output.
 
     pipenv run python annotate_schema.py < input_schema.json
+
+## Schema type
+
+While the input to this script is always a JSON Schema, multiple possible formats can be used to derive descriptions during code generation.
+In addition to `jsonschema`, current options include [`zod`](https://zod.dev/) and [`typescript`](https://www.typescriptlang.org/docs/handbook/2/objects.html).
+
+## Models
+
+Multiple possible models can be used for the generation.
+Currently most models which implement `AutoModelForCausalLM` and `AutoTokenizer` should work.
+The specific model can be specified with the `-m/--model` flag.
+A few examples are given below.
+
+- `bigcode/starcoder`
+- `facebook/incoder-1B`
+- `facebook/incoder-6B`
+- `replit/replit-code-v1-3b`
+- `Salesforce/codegen-350M-mono`
+- `Salesforce/codegen-350M-multi`
+- `Salesforce/codegen-6B-mono`
+- `Salesforce/codegen-6B-multi`
+- `Salesforce/codegen-16B-mono`
+- `Salesforce/codegen-16B-multi`
+- `Salesforce/codegen2-16B`
+- `Salesforce/codegen2-1B`
+- `Salesforce/codegen2-7B`
+- `Salesforce/codegen25-7b-mono`
+- `Salesforce/codegen25-7b-multi`
+- `Salesforce/codet5-large`
+- `Salesforce/codet5-small`
