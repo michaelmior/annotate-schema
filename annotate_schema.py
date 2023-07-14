@@ -25,6 +25,12 @@ def get_all_paths(obj, prefix="$"):
         yield prefix
     elif obj.get("type") == "array" and "items" in obj:
         yield prefix
+        yield from get_all_paths(obj["items"], prefix + ".items")
+
+    for k in ("allOf", "anyOf", "oneOf"):
+        if k in obj:
+            for i, v in enumerate(obj[k]):
+                yield from get_all_paths(v, prefix + "." + k + "[" + str(i) + "]")
 
 
 # Adapted from jsonformer
