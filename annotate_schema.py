@@ -9,9 +9,11 @@ import torch
 from tqdm import tqdm
 from transformers import (
     AutoModelForCausalLM,
+    AutoModelForSeq2SeqLM,
     AutoTokenizer,
     PreTrainedTokenizer,
     StoppingCriteria,
+    T5ForConditionalGeneration,
 )
 
 DESC_TAG = "!!!DESCRIPTION!!!"
@@ -86,9 +88,15 @@ def main():
 
     # Load model
     sys.stderr.write("Loading model…\n")
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model, trust_remote_code=True, device_map="auto"
-    )
+    is_t5 = args.model.startswith("Salesforce/codet5")
+    if is_t5:
+        model = T5ForConditionalGeneration.from_pretrained(
+            args.model, device_map="auto"
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model, trust_remote_code=True, device_map="auto"
+        )
 
     # load tokenizer
     sys.stderr.write("Loading tokenizer…\n")
@@ -151,8 +159,14 @@ def main():
             y[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
 
+        # For models other than T5, the generated code includes the description
+        if is_t5:
+            desc = generated_code
+            print(desc)
+        else:
+            desc = generated_code[len(desc_str) :]
+
         # Clean up the description by stripping whitespace and quote if needed
-        desc = generated_code[len(desc_str) :]
         last_quote = desc.rfind('"')
         if last_quote != -1 and desc[last_quote - 1] != "\\":
             desc = desc[:last_quote]

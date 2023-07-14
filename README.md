@@ -39,10 +39,11 @@ In addition to `jsonschema`, current options include [`zod`](https://zod.dev/) a
 ## Models
 
 Multiple possible models can be used for the generation.
-Currently most models which implement `AutoModelForCausalLM` and `AutoTokenizer` should work.
+Currently most models which support `AutoModelForCausalLM` or `T5ForConditionalGeneration` and `AutoTokenizer` should work.
 The specific model can be specified with the `-m/--model` flag.
 A few examples are given below.
 
+- `bigcode/santacoder`
 - `bigcode/starcoder`
 - `facebook/incoder-1B`
 - `facebook/incoder-6B`
@@ -53,10 +54,16 @@ A few examples are given below.
 - `Salesforce/codegen-6B-multi`
 - `Salesforce/codegen-16B-mono`
 - `Salesforce/codegen-16B-multi`
-- `Salesforce/codegen2-16B`
 - `Salesforce/codegen2-1B`
 - `Salesforce/codegen2-7B`
+- `Salesforce/codegen2-16B`
 - `Salesforce/codegen25-7b-mono`
 - `Salesforce/codegen25-7b-multi`
 - `Salesforce/codet5-large`
 - `Salesforce/codet5-small`
+- `Salesforce/codet5p-220m`
+- `Salesforce/codet5p-220m-py`
+- `Salesforce/codet5p-770m`
+- `Salesforce/codet5p-770m-py`
+- `Salesforce/codet5p-2b`
+- `Salesforce/codet5p-16b`
