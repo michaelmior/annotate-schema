@@ -66,7 +66,7 @@ def main():
         "--schema-type",
         type=str,
         default="jsonschema",
-        choices=["jsonschema", "typescript", "zod"],
+        choices=["jsonschema", "pydantic", "typescript", "zod"],
     )
     parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1-3b")
     parser.add_argument("-t", "--max-tokens", type=int, default=2048)
@@ -99,6 +99,14 @@ def main():
 
         if args.schema_type == "jsonschema":
             desc_str = json.dumps(desc_obj)
+        elif args.schema_type == "pydantic":
+            out = subprocess.run(
+                ["pipenv", "run", "datamodel-codegen", "--use-double-quotes"],
+                input=json.dumps(desc_obj),
+                capture_output=True,
+                encoding="utf-8",
+            )
+            desc_str = out.stdout
         elif args.schema_type == "typescript":
             desc_obj["title"] = "JSONSchema"
             out = subprocess.run(

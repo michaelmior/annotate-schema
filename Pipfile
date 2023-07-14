@@ -12,6 +12,7 @@ jsonpath-ng = "*"
 tqdm = "*"
 accelerate = "*"
 tiktoken = "*"
+datamodel-code-generator = "*"
 
 [dev-packages]
 
