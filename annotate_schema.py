@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 import subprocess
 import sys
@@ -95,7 +96,7 @@ def main():
         # Add the description as a tag and use it to find where to remove the
         # tag so we can start description generation after the opening qupte
         desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
-        desc_obj = desc_path.update_or_create(obj, DESC_TAG)
+        desc_obj = desc_path.update_or_create(copy.deepcopy(obj), DESC_TAG)
 
         if args.schema_type == "jsonschema":
             desc_str = json.dumps(desc_obj)
