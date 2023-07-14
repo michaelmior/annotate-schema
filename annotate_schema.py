@@ -69,6 +69,7 @@ def main():
         choices=["jsonschema", "typescript", "zod"],
     )
     parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1-3b")
+    parser.add_argument("-t", "--max-tokens", type=int, default=2048)
     args = parser.parse_args()
 
     json_str = sys.stdin.read()
@@ -117,6 +118,7 @@ def main():
             desc_str = out.stdout
 
         desc_str = desc_str[: desc_str.find(DESC_TAG)]
+        desc_str = desc_str[-args.max_tokens :]
 
         # Encode the input and generate a description
         x = tokenizer.encode(desc_str, return_tensors="pt")
