@@ -38,7 +38,7 @@ def get_all_paths(obj, prefix="$"):
         if not found_props:
             yield prefix
 
-    elif obj.get("type") in ["string", "number", "boolean"] or '$ref' in obj:
+    elif obj.get("type") in ["string", "number", "boolean"] or "$ref" in obj:
         yield prefix
     elif obj.get("type") == "array" and "items" in obj:
         yield prefix
