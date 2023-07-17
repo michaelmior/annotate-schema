@@ -18,6 +18,13 @@ DESC_TAG = "!!!DESCRIPTION!!!"
 
 
 def get_all_paths(obj, prefix="$"):
+    # Add descriptions to any top-level definitions
+    def_keys = ["definitions", "$defs"]
+    for def_key in def_keys:
+        if prefix == "$" and def_key in obj:
+            for k, v in obj[def_key].items():
+                yield from get_all_paths(v, prefix + "." + def_key + "." + k)
+
     if obj.get("type") == "object":
         for k, v in obj["properties"].items():
             yield from get_all_paths(v, prefix + ".properties." + k)
