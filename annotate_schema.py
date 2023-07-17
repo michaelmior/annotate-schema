@@ -11,7 +11,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     PreTrainedTokenizer,
-    StoppingCriteria
+    StoppingCriteria,
 )
 
 DESC_TAG = "!!!DESCRIPTION!!!"
@@ -66,6 +66,65 @@ class StringStoppingCriteria(StoppingCriteria):
                 return last_token[last_quote - 1] != "\\"
 
 
+def generate_description(schema, desc_path, schema_type, model, tokenizer, max_tokens):
+    # Add the description as a tag and use it to find where to remove the
+    # tag so we can start description generation after the opening qupte
+    desc_obj = desc_path.update_or_create(copy.deepcopy(schema), DESC_TAG)
+
+    if schema_type == "jsonschema":
+        desc_str = json.dumps(desc_obj)
+    elif schema_type == "pydantic":
+        out = subprocess.run(
+            ["pipenv", "run", "datamodel-codegen", "--use-double-quotes"],
+            input=json.dumps(desc_obj),
+            capture_output=True,
+            encoding="utf-8",
+        )
+        desc_str = out.stdout
+    elif schema_type == "typescript":
+        desc_obj["title"] = "JSONSchema"
+        out = subprocess.run(
+            ["yarn", "json2ts", "--unreachableDefinitions"],
+            input=json.dumps(desc_obj),
+            capture_output=True,
+            encoding="utf-8",
+        )
+        desc_str = out.stdout
+    elif schema_type == "zod":
+        out = subprocess.run(
+            ["yarn", "json-schema-to-zod", "-s", "/dev/stdin"],
+            input=json.dumps(desc_obj),
+            capture_output=True,
+            encoding="utf-8",
+        )
+        desc_str = out.stdout
+
+    desc_str = desc_str[: desc_str.find(DESC_TAG)]
+    desc_str = desc_str[-max_tokens:]
+
+    # Encode the input and generate a description
+    x = tokenizer.encode(desc_str, return_tensors="pt")
+    y = model.generate(
+        x,
+        do_sample=True,
+        num_beams=3,
+        max_new_tokens=50,
+        pad_token_id=tokenizer.eos_token_id,
+        stopping_criteria=[StringStoppingCriteria(tokenizer, len(x), schema_type)],
+    )
+    generated_code = tokenizer.decode(
+        y[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
+    )
+
+    # Clean up the description by stripping whitespace and quote if needed
+    desc = generated_code[len(desc_str) :]
+    last_quote = desc.rfind('"')
+    if last_quote != -1 and desc[last_quote - 1] != "\\":
+        desc = desc[:last_quote]
+
+    return desc.strip()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -77,7 +136,9 @@ def main():
     )
     parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1-3b")
     parser.add_argument("-t", "--max-tokens", type=int, default=2048)
-    parser.add_argument("--no-strip-existing", dest="strip_existing", default=True, action="store_false")
+    parser.add_argument(
+        "--no-strip-existing", dest="strip_existing", default=True, action="store_false"
+    )
     args = parser.parse_args()
 
     json_str = sys.stdin.read()
@@ -107,64 +168,10 @@ def main():
     sys.stderr.write("Generating descriptions…\n")
     descriptions = {}
     for path in tqdm(paths):
-        # Add the description as a tag and use it to find where to remove the
-        # tag so we can start description generation after the opening qupte
         desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
-        desc_obj = desc_path.update_or_create(copy.deepcopy(obj), DESC_TAG)
-
-        if args.schema_type == "jsonschema":
-            desc_str = json.dumps(desc_obj)
-        elif args.schema_type == "pydantic":
-            out = subprocess.run(
-                ["pipenv", "run", "datamodel-codegen", "--use-double-quotes"],
-                input=json.dumps(desc_obj),
-                capture_output=True,
-                encoding="utf-8",
-            )
-            desc_str = out.stdout
-        elif args.schema_type == "typescript":
-            desc_obj["title"] = "JSONSchema"
-            out = subprocess.run(
-                ["yarn", "json2ts", "--unreachableDefinitions"],
-                input=json.dumps(desc_obj),
-                capture_output=True,
-                encoding="utf-8",
-            )
-            desc_str = out.stdout
-        elif args.schema_type == "zod":
-            out = subprocess.run(
-                ["yarn", "json-schema-to-zod", "-s", "/dev/stdin"],
-                input=json.dumps(desc_obj),
-                capture_output=True,
-                encoding="utf-8",
-            )
-            desc_str = out.stdout
-
-        desc_str = desc_str[: desc_str.find(DESC_TAG)]
-        desc_str = desc_str[-args.max_tokens :]
-
-        # Encode the input and generate a description
-        x = tokenizer.encode(desc_str, return_tensors="pt")
-        y = model.generate(
-            x,
-            do_sample=True,
-            num_beams=3,
-            max_new_tokens=50,
-            pad_token_id=tokenizer.eos_token_id,
-            stopping_criteria=[
-                StringStoppingCriteria(tokenizer, len(x), args.schema_type)
-            ],
+        desc = generate_description(
+            obj, desc_path, args.schema_type, model, tokenizer, args.max_tokens
         )
-        generated_code = tokenizer.decode(
-            y[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
-        )
-
-        # Clean up the description by stripping whitespace and quote if needed
-        desc = generated_code[len(desc_str) :]
-        last_quote = desc.rfind('"')
-        if last_quote != -1 and desc[last_quote - 1] != "\\":
-            desc = desc[:last_quote]
-        desc = desc.strip()
 
         # Store this description to update later
         descriptions[str(desc_path)] = desc
