@@ -25,10 +25,18 @@ def get_all_paths(obj, prefix="$"):
             for k, v in obj[def_key].items():
                 yield from get_all_paths(v, prefix + "." + def_key + "." + k)
 
-    if obj.get("type") == "object" and "properties" in obj:
-        for k, v in obj["properties"].items():
-            yield from get_all_paths(v, prefix + ".properties." + k)
-    elif obj.get("type") in ["string", "number", "boolean"]:
+    prop_keys = ["properties", "patternProperties"]
+    if obj.get("type") == "object":
+        found_props = False
+        for prop_key in prop_keys:
+            for k, v in obj.get(prop_key, {}).items():
+                found_props = True
+                yield from get_all_paths(v, prefix + "." + prop_key + "." + k)
+
+        if not found_props:
+            yield prefix
+
+    elif obj.get("type") in ["string", "number", "boolean"] or '$ref' in obj:
         yield prefix
     elif obj.get("type") == "array" and "items" in obj:
         yield prefix
