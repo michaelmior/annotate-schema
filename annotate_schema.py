@@ -25,7 +25,7 @@ def get_all_paths(obj, prefix="$"):
             for k, v in obj[def_key].items():
                 yield from get_all_paths(v, prefix + "." + def_key + "." + k)
 
-    if obj.get("type") == "object":
+    if obj.get("type") == "object" and "properties" in obj:
         for k, v in obj["properties"].items():
             yield from get_all_paths(v, prefix + ".properties." + k)
     elif obj.get("type") in ["string", "number", "boolean"]:
