@@ -77,6 +77,7 @@ def main():
     )
     parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1-3b")
     parser.add_argument("-t", "--max-tokens", type=int, default=2048)
+    parser.add_argument("--no-strip-existing", dest="strip_existing", default=True, action="store_false")
     args = parser.parse_args()
 
     json_str = sys.stdin.read()
@@ -96,9 +97,16 @@ def main():
         args.model, trust_remote_code=True, device_map="auto"
     )
 
+    paths = list(get_all_paths(obj))
+
+    # Strip existing descriptions if requested
+    if args.strip_existing:
+        for path in paths:
+            obj = jsonpath_ng.parse(path).filter(lambda x: True, obj)
+
     sys.stderr.write("Generating descriptions…\n")
     descriptions = {}
-    for path in tqdm(list(get_all_paths(obj))):
+    for path in tqdm(paths):
         # Add the description as a tag and use it to find where to remove the
         # tag so we can start description generation after the opening qupte
         desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
