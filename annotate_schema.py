@@ -178,7 +178,8 @@ def main():
     # Strip existing descriptions if requested
     if args.strip_existing:
         for path in paths:
-            obj = jsonpath_ng.parse(path).filter(lambda x: True, obj)
+            desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
+            obj = desc_path.filter(lambda _: True, obj)
 
     sys.stderr.write("Generating descriptions…\n")
     descriptions = {}
