@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     paths = get_all_paths(obj1)
 
-    # Import our models. The package will take care of downloading the models automatically
+    # Load the pretrained tokenizer and embedding models
     tokenizer = AutoTokenizer.from_pretrained(
         "princeton-nlp/sup-simcse-bert-base-uncased"
     )
