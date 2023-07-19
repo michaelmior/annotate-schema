@@ -86,26 +86,22 @@ class StringStoppingCriteria(StoppingCriteria):
                 return last_token[last_quote - 1] != "\\"
 
 
-def generate_description(schema, desc_path, schema_type, model, tokenizer, max_tokens):
-    # Add the description as a tag and use it to find where to remove the
-    # tag so we can start description generation after the opening qupte
-    desc_obj = desc_path.update_or_create(copy.deepcopy(schema), DESC_TAG)
-
+def convert_schema(obj, schema_type):
     if schema_type == "jsonschema":
-        desc_str = json.dumps(desc_obj)
+        desc_str = json.dumps(obj)
     elif schema_type == "pydantic":
         out = subprocess.run(
             ["pipenv", "run", "datamodel-codegen", "--use-double-quotes"],
-            input=json.dumps(desc_obj),
+            input=json.dumps(obj),
             capture_output=True,
             encoding="utf-8",
         )
         desc_str = out.stdout
     elif schema_type == "typescript":
-        desc_obj["title"] = "JSONSchema"
+        obj["title"] = "JSONSchema"
         out = subprocess.run(
             ["yarn", "json2ts", "--unreachableDefinitions"],
-            input=json.dumps(desc_obj),
+            input=json.dumps(obj),
             capture_output=True,
             encoding="utf-8",
         )
@@ -113,13 +109,27 @@ def generate_description(schema, desc_path, schema_type, model, tokenizer, max_t
     elif schema_type == "zod":
         out = subprocess.run(
             ["yarn", "json-schema-to-zod", "-s", "/dev/stdin"],
-            input=json.dumps(desc_obj),
+            input=json.dumps(obj),
             capture_output=True,
             encoding="utf-8",
         )
         desc_str = out.stdout
 
+    return desc_str
+
+
+def generate_description(schema, desc_path, schema_type, model, tokenizer, max_tokens):
+    # Add the description as a tag and use it to find where to remove the
+    # tag so we can start description generation after the opening quote
+    desc_obj = desc_path.update_or_create(copy.deepcopy(schema), DESC_TAG)
+
+    # Convert the schema to the approprate format
+    desc_str = convert_schema(desc_obj, schema_type)
+
+    # Strip out everything after the fake description that was inserted
     desc_str = desc_str[: desc_str.find(DESC_TAG)]
+
+    # Only use up to the given maximum number of tokens
     desc_str = desc_str[-max_tokens:]
 
     # Encode the input and generate a description
