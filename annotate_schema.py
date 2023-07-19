@@ -68,7 +68,7 @@ class StringStoppingCriteria(StoppingCriteria):
         if len(input_ids[0]) <= self.prompt_length:
             return False
 
-        last_token_id = input_ids[0][-1]
+        last_token_id = input_ids[0][-1:]
         last_token = self.tokenizer.decode(last_token_id, skip_special_tokens=True)
 
         if self.schema_type == "typescript":
