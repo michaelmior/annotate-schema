@@ -13,6 +13,7 @@ from tqdm import tqdm
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    GenerationConfig,
     PreTrainedTokenizer,
     StoppingCriteria,
 )
@@ -136,10 +137,13 @@ def generate_description(schema, desc_path, schema_type, model, tokenizer, max_t
     x = tokenizer.encode(desc_str, return_tensors="pt")
     y = model.generate(
         x,
-        do_sample=True,
-        num_beams=3,
-        max_new_tokens=50,
-        pad_token_id=tokenizer.eos_token_id,
+        generation_config=GenerationConfig(
+            do_sample=True,
+            num_beams=3,
+            max_new_tokens=50,
+            eos_token_id=tokenizer.eos_token_id,
+            pad_token_id=tokenizer.pad_token_id,
+        ),
         stopping_criteria=[StringStoppingCriteria(tokenizer, len(x), schema_type)],
     )
     generated_code = tokenizer.decode(
