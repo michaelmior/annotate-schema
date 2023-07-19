@@ -1,8 +1,11 @@
 import argparse
 import copy
 import json
+import os
 import subprocess
 import sys
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 import jsonpath_ng
 import torch
