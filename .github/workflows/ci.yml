@@ -1,0 +1,30 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+          cache: 'pipenv'
+      - name: Install pipenv
+        run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
+      - name: Install Python dependencies
+        run: pipenv install --dev
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'yarn'
+      - name: Install Node.js dependencies
+        run: yarn install
+      - name:
+        run: |
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 < test.json > test-desc.json
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s pydantic < test.json
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s typescript < test.json
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s zod < test.json
+          pipenv run python test.py test-desc.json test.json
