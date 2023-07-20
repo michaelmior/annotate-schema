@@ -9,11 +9,8 @@ from tqdm import tqdm
 
 from annotate_schema import get_all_paths
 
-if __name__ == "__main__":
-    # Load both objects
-    obj1 = json.load(open(sys.argv[1]))
-    obj2 = json.load(open(sys.argv[2]))
 
+def compare_objects(obj1, obj2):
     paths = get_all_paths(obj1)
 
     # Load the pretrained tokenizer and embedding models
@@ -45,4 +42,13 @@ if __name__ == "__main__":
         cosine_sim = 1 - cosine(embeddings[0], embeddings[1])
         sims.append(cosine_sim)
 
-    print(sum(sims) / len(sims))
+    return sum(sims) / len(sims)
+
+
+if __name__ == "__main__":
+    # Load both objects
+    obj1 = json.load(open(sys.argv[1]))
+    obj2 = json.load(open(sys.argv[2]))
+
+    # Print similarity
+    print(compare_objects(obj1, obj2))
