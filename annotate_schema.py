@@ -138,8 +138,7 @@ def generate_description(schema, desc_path, schema_type, model, tokenizer, max_t
             do_sample=True,
             num_beams=3,
             max_new_tokens=50,
-            eos_token_id=tokenizer.eos_token_id,
-            pad_token_id=tokenizer.pad_token_id,
+            pad_token_id=tokenizer.eos_token_id,
         ),
         stopping_criteria=[StringStoppingCriteria(tokenizer, len(x), schema_type)],
     )
