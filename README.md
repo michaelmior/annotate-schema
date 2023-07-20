@@ -1,5 +1,6 @@
 # Schema annotation
 [![CI](https://github.com/michaelmior/annotate-schema/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelmior/annotate-schema/actions/workflows/ci.yml)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/michaelmior/annotate-schema/main.svg)](https://results.pre-commit.ci/latest/github/michaelmior/annotate-schema/main)
 
 This repository contains a single script which attempts to augment a provided schema to add a `description` to each attribute using the power of LLMs.
 It works by generating a prompt for each JSON path in the schema and then executing a LLM to generate a description for each attribute.
