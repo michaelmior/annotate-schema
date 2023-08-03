@@ -14,6 +14,7 @@ from transformers import (
     PreTrainedTokenizer,
     StoppingCriteria,
 )
+from auto_gptq import AutoGPTQForCausalLM
 
 DESC_TAG = "!!!DESCRIPTION!!!"
 
@@ -167,6 +168,9 @@ def main():
         choices=["jsonschema", "pydantic", "typescript", "zod"],
     )
     parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1-3b")
+    parser.add_argument(
+        "-b", "--model-basename", dest="basename", type=str, default=None
+    )
     parser.add_argument("-t", "--max-tokens", type=int, default=2048)
     parser.add_argument(
         "--no-strip-existing", dest="strip_existing", default=True, action="store_false"
@@ -192,9 +196,19 @@ def main():
             kwargs["revision"] = "float16"
             kwargs["torch_dtype"] = torch.float16
 
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model, trust_remote_code=True, device_map="auto", **kwargs
-    ).to(device)
+    if args.model.endswith("GPTQ"):
+        model = AutoGPTQForCausalLM.from_quantized(
+            args.model,
+            model_basename=args.basename,
+            use_safetensors=True,
+            trust_remote_code=True,
+            use_triton=False,
+            quantize_config=None,
+        ).to(device)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model, trust_remote_code=True, device_map="auto", **kwargs
+        ).to(device)
 
     # load tokenizer
     sys.stderr.write("Loading tokenizer…\n")

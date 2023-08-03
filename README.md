@@ -63,3 +63,4 @@ A few examples are given below.
 - `Salesforce/codegen2-16B`
 - `Salesforce/codegen25-7b-mono`
 - `Salesforce/codegen25-7b-multi`
+- `TheBloke/Codegen25-7B-mono-GPTQ` (with `--model-basename gptq_model-4bit-128g`)
