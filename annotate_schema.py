@@ -116,7 +116,9 @@ def convert_schema(obj, schema_type):
     return desc_str
 
 
-def generate_description(schema, desc_path, schema_type, model, tokenizer, max_tokens):
+def generate_description(
+    schema, desc_path, schema_type, model, tokenizer, device, max_tokens
+):
     # Add the description as a tag and use it to find where to remove the
     # tag so we can start description generation after the opening quote
     desc_obj = desc_path.update_or_create(copy.deepcopy(schema), DESC_TAG)
@@ -131,7 +133,7 @@ def generate_description(schema, desc_path, schema_type, model, tokenizer, max_t
     desc_str = desc_str[-max_tokens:]
 
     # Encode the input and generate a description
-    x = tokenizer.encode(desc_str, return_tensors="pt")
+    x = tokenizer.encode(desc_str, return_tensors="pt").to(device)
     y = model.generate(
         x,
         generation_config=GenerationConfig(
@@ -169,7 +171,10 @@ def main():
     parser.add_argument(
         "--no-strip-existing", dest="strip_existing", default=True, action="store_false"
     )
+    parser.add_argument("-c", "--cpu", default=False, action="store_true")
     args = parser.parse_args()
+
+    device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
 
     json_str = sys.stdin.read()
     obj = json.loads(json_str)
@@ -178,9 +183,18 @@ def main():
 
     # Load model
     sys.stderr.write("Loading model…\n")
+
+    # Add model-specific parameters
+    kwargs = {}
+    if args.model.startswith("facebook/incoder-"):
+        kwargs["low_cpu_mem_usage"] = True
+        if torch.cuda.is_available():
+            kwargs["revision"] = "float16"
+            kwargs["torch_dtype"] = torch.float16
+
     model = AutoModelForCausalLM.from_pretrained(
-        args.model, trust_remote_code=True, device_map="auto"
-    )
+        args.model, trust_remote_code=True, device_map="auto", **kwargs
+    ).to(device)
 
     # load tokenizer
     sys.stderr.write("Loading tokenizer…\n")
@@ -201,7 +215,7 @@ def main():
     for path in tqdm(paths):
         desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
         desc = generate_description(
-            obj, desc_path, args.schema_type, model, tokenizer, args.max_tokens
+            obj, desc_path, args.schema_type, model, tokenizer, device, args.max_tokens
         )
 
         # Store this description to update later

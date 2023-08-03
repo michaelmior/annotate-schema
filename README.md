@@ -43,6 +43,8 @@ In addition to `jsonschema`, current options include [`zod`](https://zod.dev/) a
 Multiple possible models can be used for the generation.
 Currently most models which support `AutoModelForCausalLM` and `AutoTokenizer` should work.
 The specific model can be specified with the `-m/--model` flag.
+Note that some models may not currently support GPU inference.
+If a model produces errors, try running again with the `--cpu` flag.
 A few examples are given below.
 
 - `bigcode/santacoder`
