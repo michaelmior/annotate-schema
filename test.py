@@ -11,7 +11,7 @@ from tqdm import tqdm
 from annotate_schema import get_all_paths
 
 
-def compare_objects_bertscore(obj1, obj2):
+def compare_objects(obj1, obj2, score_func):
     cands = []
     refs = []
 
@@ -27,13 +27,15 @@ def compare_objects_bertscore(obj1, obj2):
         cands.append(desc_path.find(obj1)[0].value)
         refs.append(desc_path.find(obj2)[0].value)
 
+    return score_func(cands, refs)
+
+
+def score_bertscore(cands, refs):
     P, R, F1 = bert_score.score(cands, refs, lang="en", rescale_with_baseline=True)
     return float(F1.mean())
 
 
-def compare_objects_cosine(obj1, obj2):
-    paths = get_all_paths(obj1)
-
+def score_cosine(cands, refs):
     # Load the pretrained tokenizer and embedding models
     tokenizer = AutoTokenizer.from_pretrained(
         "princeton-nlp/sup-simcse-bert-base-uncased"
@@ -41,16 +43,8 @@ def compare_objects_cosine(obj1, obj2):
     model = AutoModel.from_pretrained("princeton-nlp/sup-simcse-bert-base-uncased")
 
     sims = []
-    for path in tqdm(list(paths)):
-        desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
-
-        # Check if the original schema has a description
-        orig_desc = desc_path.find(obj2)
-        if len(orig_desc) == 0:
-            continue
-
-        # Get the tokenized version of each description
-        descs = [desc_path.find(obj1)[0].value, desc_path.find(obj2)[0].value]
+    for cand, ref in zip(cands, refs):
+        descs = [cand, ref]
         inputs = tokenizer(descs, padding=True, truncation=True, return_tensors="pt")
 
         # Find the embeddings of both descriptions
@@ -80,13 +74,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Select the desired scorer
-    score_func = compare_objects_cosine
+    score_func = score_cosine
     if args.scorer == "bertscore":
-        score_func = compare_objects_bertscore
+        score_func = score_bertscore
 
     # Load both objects
     obj1 = json.load(open(args.candidate))
     obj2 = json.load(open(args.reference))
 
     # Print similarity
-    print(score_func(obj1, obj2))
+    print(compare_objects(obj1, obj2, score_func))
