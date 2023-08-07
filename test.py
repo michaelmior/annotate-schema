@@ -1,6 +1,7 @@
+import argparse
 import json
-import sys
 
+import bert_score
 import jsonpath_ng
 import torch
 from scipy.spatial.distance import cosine
@@ -10,7 +11,27 @@ from tqdm import tqdm
 from annotate_schema import get_all_paths
 
 
-def compare_objects(obj1, obj2):
+def compare_objects_bertscore(obj1, obj2):
+    cands = []
+    refs = []
+
+    paths = get_all_paths(obj1)
+    for path in tqdm(list(paths)):
+        desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
+
+        # Check if the original schema has a description
+        orig_desc = desc_path.find(obj2)
+        if len(orig_desc) == 0:
+            continue
+
+        cands.append(desc_path.find(obj1)[0].value)
+        refs.append(desc_path.find(obj2)[0].value)
+
+    P, R, F1 = bert_score.score(cands, refs, lang="en", rescale_with_baseline=True)
+    return float(F1.mean())
+
+
+def compare_objects_cosine(obj1, obj2):
     paths = get_all_paths(obj1)
 
     # Load the pretrained tokenizer and embedding models
@@ -46,9 +67,26 @@ def compare_objects(obj1, obj2):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("candidate")
+    parser.add_argument("reference")
+    parser.add_argument(
+        "-s",
+        "--scorer",
+        type=str,
+        default="cosine",
+        choices=["cosine", "bertscore"],
+    )
+    args = parser.parse_args()
+
+    # Select the desired scorer
+    score_func = compare_objects_cosine
+    if args.scorer == "bertscore":
+        score_func = compare_objects_bertscore
+
     # Load both objects
-    obj1 = json.load(open(sys.argv[1]))
-    obj2 = json.load(open(sys.argv[2]))
+    obj1 = json.load(open(args.candidate))
+    obj2 = json.load(open(args.reference))
 
     # Print similarity
-    print(compare_objects(obj1, obj2))
+    print(score_func(obj1, obj2))

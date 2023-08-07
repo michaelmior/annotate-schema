@@ -15,6 +15,7 @@ tiktoken = "*"
 datamodel-code-generator = "*"
 scipy = "*"
 auto-gptq = "==0.3.1"
+bert-score = "*"
 
 [dev-packages]
 
