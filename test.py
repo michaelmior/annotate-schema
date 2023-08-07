@@ -3,6 +3,7 @@ import json
 
 import bert_score
 import jsonpath_ng
+import nltk
 import torch
 from scipy.spatial.distance import cosine
 from transformers import AutoModel, AutoTokenizer
@@ -28,6 +29,22 @@ def compare_objects(obj1, obj2, score_func):
         refs.append(desc_path.find(obj2)[0].value)
 
     return score_func(cands, refs)
+
+
+def score_bleu(cands, refs):
+    cands_tok = list(map(nltk.tokenize.word_tokenize, cands))
+    refs_tok = [[nltk.tokenize.word_tokenize(s)] for s in refs]
+    return nltk.translate.bleu_score.corpus_bleu(refs_tok, cands_tok)
+
+
+def score_meteor(cands, refs):
+    sims = []
+    for cand, ref in zip(cands, refs):
+        cand_tok = nltk.tokenize.word_tokenize(cand)
+        ref_tok = nltk.tokenize.word_tokenize(ref)
+        sims.append(nltk.translate.meteor_score.single_meteor_score(ref_tok, cand_tok))
+
+    return sum(sims) / len(sims)
 
 
 def score_bertscore(cands, refs):
@@ -69,7 +86,7 @@ if __name__ == "__main__":
         "--scorer",
         type=str,
         default="cosine",
-        choices=["cosine", "bertscore"],
+        choices=["cosine", "bertscore", "bleu", "meteor"],
     )
     args = parser.parse_args()
 
@@ -77,6 +94,10 @@ if __name__ == "__main__":
     score_func = score_cosine
     if args.scorer == "bertscore":
         score_func = score_bertscore
+    elif args.scorer == "bleu":
+        score_func = score_bleu
+    elif args.scorer == "meteor":
+        score_func = score_meteor
 
     # Load both objects
     obj1 = json.load(open(args.candidate))

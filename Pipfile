@@ -16,6 +16,7 @@ datamodel-code-generator = "*"
 scipy = "*"
 auto-gptq = "==0.3.1"
 bert-score = "*"
+nltk = "*"
 
 [dev-packages]
 
