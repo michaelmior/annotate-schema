@@ -192,7 +192,7 @@ def main():
     kwargs = {}
     if args.model.startswith("facebook/incoder-"):
         kwargs["low_cpu_mem_usage"] = True
-        if torch.cuda.is_available():
+        if not args.cpu and torch.cuda.is_available():
             kwargs["revision"] = "float16"
             kwargs["torch_dtype"] = torch.float16
 
