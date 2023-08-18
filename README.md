@@ -2,7 +2,7 @@
 [![CI](https://github.com/michaelmior/annotate-schema/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelmior/annotate-schema/actions/workflows/ci.yml)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/michaelmior/annotate-schema/main.svg)](https://results.pre-commit.ci/latest/github/michaelmior/annotate-schema/main)
 
-This repository contains a single script which attempts to augment a provided schema to add a `description` to each attribute using the power of LLMs.
+This repository contains scripts which attempt to augment a provided schema to add a `description` to each attribute using the power of LLMs.
 It works by generating a prompt for each JSON path in the schema and then executing a LLM to generate a description for each attribute.
 
 
@@ -64,3 +64,27 @@ A few examples are given below.
 - `Salesforce/codegen25-7b-mono`
 - `Salesforce/codegen25-7b-multi`
 - `TheBloke/Codegen25-7B-mono-GPTQ` (with `--model-basename gptq_model-4bit-128g`)
+
+## Naming definitions
+
+The `name_definitions.py` script attempts to generate meaningful names for definitions in a schema provided on standard input.
+Since this makes use of infill, currently it only works with Facebook's InCoder models.
+For example, given a schema containing the definition below, the name `defn0` will be replaced with `person`.
+
+```json
+{
+  "definitions": {
+    "defn0": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "age": { "type": "integer" },
+        "gender": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    }
+  },
+  ...
+}
+```
