@@ -95,7 +95,7 @@ for file in tqdm.tqdm(schemas):
 
                 for found_obj in path:
                     # Get the name of the key which is the last part of the path
-                    name = found_path.split(".")[-1]
+                    name = found_path.split(".")[-1].strip('"')
                     found_obj = {name: found_obj.value}
 
                     # For each keyword, check if it is included
