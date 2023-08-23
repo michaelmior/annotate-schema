@@ -66,8 +66,13 @@ def write_obj(obj, keyword, is_neg):
         print(json.dumps({"obj": obj, "keyword": keyword, "is_neg": is_neg}))
 
 
-# Loop over all downloaded schemas
-for file in tqdm.tqdm(glob.glob("schemas/*.json")):
+# Loop over all schemas
+if len(sys.argv) < 2:
+    schemas = glob.glob("schemas/*.json")
+else:
+    schemas = sys.argv[1:]
+
+for file in tqdm.tqdm(schemas):
     with open(file) as f:
         try:
             data = json.load(f)
