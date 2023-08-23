@@ -7,7 +7,7 @@ name = "pypi"
 einops = "*"
 sentencepiece = "*"
 torch = "*"
-transformers = "*"
+transformers = {extras = ["torch"], version = "*"}
 jsonpath-ng = "*"
 tqdm = "*"
 accelerate = "*"
@@ -17,6 +17,9 @@ scipy = "*"
 auto-gptq = "==0.3.1"
 bert-score = "*"
 nltk = "*"
+torchmetrics = "*"
+wandb = "*"
+datasets = "*"
 
 [dev-packages]
 
