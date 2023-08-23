@@ -88,3 +88,20 @@ For example, given a schema containing the definition below, the name `defn0` wi
   ...
 }
 ```
+
+## Selecting relevant keywords
+
+When discovering a schema from data, it's possible to generate keywords such as `minLength` for all string properties.
+However, not all of those properties are necessarily relevant for inclusion into the final schema and may just be overfit to the dataset.
+To solve this problem, you can train a model on real-world schemas to predict whether a keyword should be included.
+
+```bash
+# Download the schemas from JSON Schema Store
+$ ./download_schemas.sh
+
+# Extract training data from the
+$ pipenv run python extract_keywords.py > extracted.json
+
+# Train the model
+pipenv run python embed_training.py extracted.json
+```
