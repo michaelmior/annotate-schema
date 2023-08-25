@@ -1,6 +1,8 @@
 import argparse
+import collections
 import copy
 import json
+import random
 import sys
 from typing import List
 
@@ -20,8 +22,17 @@ BOS = "<|endoftext|>"
 
 
 def rename_key(old_name, new_name):
-    def rename_fn(data_field, data, field):
-        data_field[new_name] = data_field.pop(old_name)
+    def rename_fn(_data_field, data, field):
+        # Shuffle the items since the order shouldn't matter anyway.
+        # This also helps make sure a diverse set of possible other
+        # definitions are seen when we have to truncate for length.
+        random_items = random.sample(list(data[field].items()), len(data[field]))
+
+        # Build an OrderedDict to ensure the definition we're naming is first
+        # This avoids it being truncated when the block of definitions is large
+        data[field] = collections.OrderedDict(random_items)
+        data[field][new_name] = data[field].pop(old_name)
+        data[field].move_to_end(new_name, last=False)
 
     return rename_fn
 
@@ -56,8 +67,8 @@ def generate(
     input_ids = tokenizer(input, return_tensors="pt").input_ids.to(device)
     max_length = max_to_generate + input_ids.flatten().size(0)
     if max_length > 2048:
-        print(
-            "warning: max_length {} is greater than the context window {}".format(
+        sys.stderr.write(
+            "warning: max_length {} is greater than the context window {}\n".format(
                 max_length, 2048
             )
         )
@@ -163,11 +174,14 @@ def infill(
 
 
 def generate_defn_name(schema, defn_path, model, tokenizer, device):
+    # Rename the definition with our sentinel token
     renamed_schema = defn_path.left.update_or_create(
         copy.deepcopy(schema), rename_key(str(defn_path.right), SPLIT_TOKEN)
     )
     defn = defn_path.left.find(renamed_schema)[0].value
-    defn_str = json.dumps({"definitions": defn}, indent=4)
+
+    # We truncate the serialized JSON below to fit the model size
+    defn_str = json.dumps({"definitions": defn}, indent=4)[:2048]
 
     out = infill(model, tokenizer, device, defn_str.split(SPLIT_TOKEN))
     new_defn_name = out["infills"][0]
