@@ -198,6 +198,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--small", default=False, action="store_true")
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
+    parser.add_argument("-k", "--keep-existing", default=False, action="store_true")
     args = parser.parse_args()
 
     if args.small:
@@ -234,6 +235,20 @@ def main():
     tokenizer.padding_side = "left"
 
     paths = list(get_defn_paths(obj))
+
+    # Erase the existing definition names before continuing
+    if not args.keep_existing:
+        for i, path in enumerate(paths):
+            defn_path = jsonpath_ng.parse(path)
+
+            # Rename the definition in the object
+            new_name = "defn" + str(i)
+            obj = defn_path.left.update_or_create(
+                obj, rename_key(str(defn_path.right), new_name)
+            )
+
+            # Replace the old path with the new path
+            paths[i] = ".".join(paths[i].split(".")[:-1] + [new_name])
 
     sys.stderr.write("Generating definition names…\n")
     defn_names = {}
