@@ -1,6 +1,7 @@
 import argparse
 import collections
 import copy
+import csv
 import json
 import random
 import sys
@@ -199,6 +200,7 @@ def main():
     parser.add_argument("-s", "--small", default=False, action="store_true")
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
     parser.add_argument("-k", "--keep-existing", default=False, action="store_true")
+    parser.add_argument("-m", "--output-mapping", default=False, action="store_true")
     args = parser.parse_args()
 
     if args.small:
@@ -237,27 +239,38 @@ def main():
     paths = list(get_defn_paths(obj))
 
     # Erase the existing definition names before continuing
+    orig_defs = {}
     if not args.keep_existing:
+        orig_mapping = {}
         for i, path in enumerate(paths):
             defn_path = jsonpath_ng.parse(path)
 
             # Rename the definition in the object
             new_name = "defn" + str(i)
+            orig_defs[paths[i]] = defn_path.find(obj)[0].value
             obj = defn_path.left.update_or_create(
                 obj, rename_key(str(defn_path.right), new_name)
             )
 
             # Replace the old path with the new path
+            old_path = paths[i]
             paths[i] = ".".join(paths[i].split(".")[:-1] + [new_name])
+
+            # Keep a mapping so we know the original definition name
+            orig_mapping[paths[i]] = old_path
+    else:
+        orig_mapping = {path: path for path in paths}
 
     sys.stderr.write("Generating definition names…\n")
     defn_names = {}
+    final_mapping = {}
     for path in tqdm(paths):
         defn_path = jsonpath_ng.parse(path)
         defn_name = generate_defn_name(obj, defn_path, model, tokenizer, device)
 
         # Store this definition name to update later
-        defn_names[str(defn_path)] = defn_name
+        defn_names[path] = defn_name
+        final_mapping[orig_mapping[path]] = ".".join(path.split(".")[:-1] + [defn_name])
 
     # Iterate through all the collected descriptions and update the object
     for path, defn_name in defn_names.items():
@@ -265,6 +278,12 @@ def main():
         obj = defn_path.left.update_or_create(
             copy.deepcopy(obj), rename_key(str(defn_path.right), defn_name)
         )
+
+    # Output the mapping between old and new definitions
+    if args.output_mapping:
+        writer = csv.writer(sys.stderr)
+        for orig, final in final_mapping.items():
+            writer.writerow([orig, final])
 
     print(json.dumps(obj, indent=4))
 
