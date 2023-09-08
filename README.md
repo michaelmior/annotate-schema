@@ -2,10 +2,11 @@
 [![CI](https://github.com/michaelmior/annotate-schema/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelmior/annotate-schema/actions/workflows/ci.yml)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/michaelmior/annotate-schema/main.svg)](https://results.pre-commit.ci/latest/github/michaelmior/annotate-schema/main)
 
-This repository contains scripts which attempt to augment a provided schema to add a `description` to each attribute using the power of LLMs.
-It works by generating a prompt for each JSON path in the schema and then executing a LLM to generate a description for each attribute.
+This repository contains scripts which attempt to augment a provided JSON Schema using the power of LLMs.
 
+## Description generation
 
+This works by generating a prompt for each JSON path in the schema and then executing a LLM to generate a description for each attribute.
 For example, the schema below has a single property `foo`.
 
     {
@@ -33,12 +34,12 @@ The resulting schema with descriptions is written to standard output.
 
     pipenv run python annotate_schema.py < input_schema.json
 
-## Schema type
+### Schema type
 
 While the input to this script is always a JSON Schema, multiple possible formats can be used to derive descriptions during code generation.
 In addition to `jsonschema`, current options include [`zod`](https://zod.dev/) and [`typescript`](https://www.typescriptlang.org/docs/handbook/2/objects.html).
 
-## Models
+### Models
 
 Multiple possible models can be used for the generation.
 Currently most models which support `AutoModelForCausalLM` and `AutoTokenizer` should work.
@@ -88,6 +89,18 @@ For example, given a schema containing the definition below, the name `defn0` wi
   ...
 }
 ```
+
+### Models
+
+Any model which is trained using MLM should work here.
+In addition, Facebook's InCoder models are supported.
+
+- facebook/incoder-1B
+- facebook/incoder-6B
+- huggingface/CodeBERTa-small-v1
+- microsoft/codebert-base
+- microsoft/codebert-base-mlm
+- neulab/codebert-javascript
 
 ## Selecting relevant keywords
 

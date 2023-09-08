@@ -11,10 +11,7 @@ from typing import List
 import jsonpath_ng
 import torch
 from tqdm import tqdm
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-)
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 # Uses code from https://github.com/dpfried/incoder/blob/main/example_usage.py
 
@@ -202,31 +199,29 @@ def generate_defn_name(schema, defn_path, model, tokenizer, device):
     defn = defn_path.left.find(renamed_schema)[0].value
 
     # We truncate the serialized JSON below to fit the model size
-    defn_str = json.dumps({"definitions": defn}, indent=4)[:2048]
+    defn_str = json.dumps({"definitions": defn}, indent=4)[:514]
 
-    out = infill(model, tokenizer, device, defn_str.split(SPLIT_TOKEN))
-    new_defn_name = out["infills"][0]
+    if getattr(model, "task", None) == "fill-mask":
+        return model(defn_str.replace(SPLIT_TOKEN, "<mask>"))[0]["token_str"]
+    else:
+        out = infill(model, tokenizer, device, defn_str.split(SPLIT_TOKEN))
+        new_defn_name = out["infills"][0]
 
-    # If a quote appears, keep anything before the quote
-    if '"' in new_defn_name:
-        quote_index = new_defn_name.index('"')
-        new_defn_name = new_defn_name[:quote_index]
+        # If a quote appears, keep anything before the quote
+        if '"' in new_defn_name:
+            quote_index = new_defn_name.index('"')
+            new_defn_name = new_defn_name[:quote_index]
 
-    return new_defn_name.strip()
+        return new_defn_name.strip()
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--small", default=False, action="store_true")
+    parser.add_argument("-m", "--model-name", default="neulab/codebert-javascript")
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
     parser.add_argument("-k", "--keep-existing", default=False, action="store_true")
-    parser.add_argument("-m", "--output-mapping", default=False, action="store_true")
+    parser.add_argument("-o", "--output-mapping", default=False, action="store_true")
     args = parser.parse_args()
-
-    if args.small:
-        model_name = "facebook/incoder-1B"
-    else:
-        model_name = "facebook/incoder-6B"
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
 
@@ -236,25 +231,30 @@ def main():
     # Load model
     sys.stderr.write("Loading model…\n")
 
-    # Add model-specific parameters
-    kwargs = {}
-    if not args.small:
-        kwargs["low_cpu_mem_usage"] = True
-        if not args.cpu:
-            kwargs["revision"] = "float16"
-            kwargs["torch_dtype"] = torch.float16
+    if args.model_name.startswith("facebook/incoder-"):
+        # Add model-specific parameters
+        kwargs = {}
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, trust_remote_code=True, device_map="auto", **kwargs
-    ).to(device)
+        if args.model_name == "facebook/incoder-6B":
+            kwargs["low_cpu_mem_usage"] = True
+            if not args.cpu:
+                kwargs["revision"] = "float16"
+                kwargs["torch_dtype"] = torch.float16
 
-    # load tokenizer
-    sys.stderr.write("Loading tokenizer…\n")
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name, trust_remote_code=True, device_map="auto"
-    )
-    tokenizer.pad_token = "<pad>"
-    tokenizer.padding_side = "left"
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name, trust_remote_code=True, device_map="auto", **kwargs
+        ).to(device)
+
+        # Load tokenizer
+        sys.stderr.write("Loading tokenizer…\n")
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, trust_remote_code=True, device_map="auto"
+        )
+        tokenizer.pad_token = "<pad>"
+        tokenizer.padding_side = "left"
+    else:
+        model = pipeline("fill-mask", model=args.model_name, device=device)
+        tokenizer = None
 
     paths = list(get_defn_paths(obj))
 
