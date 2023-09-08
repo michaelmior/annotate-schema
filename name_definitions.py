@@ -4,6 +4,7 @@ import copy
 import csv
 import json
 import random
+import re
 import sys
 from typing import List
 
@@ -174,6 +175,25 @@ def infill(
     }
 
 
+def path_to_ref(path):
+    return re.sub("^\$", "#", path).replace(".", "/")
+
+
+def replace_references(obj, old_path, new_path):
+    if isinstance(obj, dict):
+        obj = copy.deepcopy(obj)
+        if "$ref" in obj and obj["$ref"] == path_to_ref(old_path):
+            obj["$ref"] = path_to_ref(new_path)
+        return {
+            key: replace_references(value, old_path, new_path)
+            for key, value in obj.items()
+        }
+    elif isinstance(obj, list):
+        return [replace_references(item, old_path, new_path) for item in obj]
+    else:
+        return obj
+
+
 def generate_defn_name(schema, defn_path, model, tokenizer, device):
     # Rename the definition with our sentinel token
     renamed_schema = defn_path.left.update_or_create(
@@ -255,6 +275,7 @@ def main():
             # Replace the old path with the new path
             old_path = paths[i]
             paths[i] = ".".join(paths[i].split(".")[:-1] + [new_name])
+            obj = replace_references(obj, old_path, paths[i])
 
             # Keep a mapping so we know the original definition name
             orig_mapping[paths[i]] = old_path
@@ -278,6 +299,8 @@ def main():
         obj = defn_path.left.update_or_create(
             copy.deepcopy(obj), rename_key(str(defn_path.right), defn_name)
         )
+        new_path = ".".join(paths[i].split(".")[:-1] + [defn_name])
+        obj = replace_references(obj, path, new_path)
 
     # Output the mapping between old and new definitions
     if args.output_mapping:
