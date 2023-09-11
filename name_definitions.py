@@ -284,10 +284,19 @@ def main():
 
     sys.stderr.write("Generating definition names…\n")
     defn_names = {}
+    new_names = set()
     final_mapping = {}
     for path in tqdm(paths):
         defn_path = jsonpath_ng.parse(path)
         defn_name = generate_defn_name(obj, defn_path, model, tokenizer, device)
+
+        # Add a numerical suffix if needed
+        if defn_name in new_names:
+            i = 2
+            while (defn_name + str(i)) in new_names:
+                i += 1
+            defn_name += str(i)
+        new_names.add(defn_name)
 
         # Store this definition name to update later
         defn_names[path] = defn_name
