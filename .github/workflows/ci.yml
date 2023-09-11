@@ -27,4 +27,4 @@ jobs:
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s pydantic < test.json
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s typescript < test.json
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s zod < test.json
-          pipenv run python test.py test-desc.json test.json
+          pipenv run python eval.py test-desc.json test.json
