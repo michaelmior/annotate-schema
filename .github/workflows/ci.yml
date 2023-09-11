@@ -20,7 +20,7 @@ jobs:
           node-version: '16'
           cache: 'yarn'
       - name: Install Node.js dependencies
-        run: yarn install
+        run: yarn install --immutable
       - name: Run tests
         run: |
           pipenv run python test.py

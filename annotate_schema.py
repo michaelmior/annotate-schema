@@ -17,6 +17,7 @@ from transformers import (
 from auto_gptq import AutoGPTQForCausalLM
 
 DESC_TAG = "!!!DESCRIPTION!!!"
+YARN_CMD = ["yarn", "run", "--silent", "--"]
 
 
 def get_all_paths(obj, prefix="$"):
@@ -99,7 +100,7 @@ def convert_schema(obj, schema_type):
     elif schema_type == "typescript":
         obj["title"] = "JSONSchema"
         out = subprocess.run(
-            ["yarn", "run", "json2ts", "--unreachableDefinitions"],
+            YARN_CMD + ["json2ts", "--unreachableDefinitions"],
             input=json.dumps(obj),
             capture_output=True,
             encoding="utf-8",
@@ -107,7 +108,7 @@ def convert_schema(obj, schema_type):
         desc_str = out.stdout
     elif schema_type == "zod":
         out = subprocess.run(
-            ["yarn", "run", "json-schema-to-zod", "-s", "/dev/stdin"],
+            YARN_CMD + ["json-schema-to-zod", "-s", "/dev/stdin"],
             input=json.dumps(obj),
             capture_output=True,
             encoding="utf-8",
