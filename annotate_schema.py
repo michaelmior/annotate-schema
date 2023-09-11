@@ -99,7 +99,7 @@ def convert_schema(obj, schema_type):
     elif schema_type == "typescript":
         obj["title"] = "JSONSchema"
         out = subprocess.run(
-            ["yarn", "json2ts", "--unreachableDefinitions"],
+            ["yarn", "run", "json2ts", "--unreachableDefinitions"],
             input=json.dumps(obj),
             capture_output=True,
             encoding="utf-8",
@@ -107,7 +107,7 @@ def convert_schema(obj, schema_type):
         desc_str = out.stdout
     elif schema_type == "zod":
         out = subprocess.run(
-            ["yarn", "json-schema-to-zod", "-s", "/dev/stdin"],
+            ["yarn", "run", "json-schema-to-zod", "-s", "/dev/stdin"],
             input=json.dumps(obj),
             capture_output=True,
             encoding="utf-8",
