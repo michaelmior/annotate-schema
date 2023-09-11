@@ -1,0 +1,8 @@
+{
+  "name": "annotate-schema",
+  "packageManager": "yarn@3.2.4",
+  "dependencies": {
+    "json-schema-to-typescript": "^13.0.2",
+    "json-schema-to-zod": "^1.1.0"
+  }
+}

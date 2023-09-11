@@ -1,5 +1,6 @@
 *.json
 !test.json
+!package.json
 .yarn/*
 !.yarn/cache
 !.yarn/patches
