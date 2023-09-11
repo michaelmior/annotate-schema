@@ -21,8 +21,9 @@ jobs:
           cache: 'yarn'
       - name: Install Node.js dependencies
         run: yarn install
-      - name:
+      - name: Run tests
         run: |
+          pipenv run python test.py
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 < test.json > test-desc.json
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s pydantic < test.json
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s typescript < test.json

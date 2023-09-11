@@ -118,7 +118,7 @@ def convert_schema(obj, schema_type):
 
 
 def generate_description(
-    schema, desc_path, schema_type, model, tokenizer, device, max_tokens
+    schema, desc_path, schema_type, model, tokenizer, device="cpu", max_tokens=2048
 ):
     # Add the description as a tag and use it to find where to remove the
     # tag so we can start description generation after the opening quote
