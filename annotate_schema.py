@@ -93,6 +93,7 @@ def convert_schema(obj, schema_type):
         out = subprocess.run(
             ["pipenv", "run", "datamodel-codegen", "--use-double-quotes"],
             input=json.dumps(obj),
+            check=True,
             capture_output=True,
             encoding="utf-8",
         )
@@ -102,6 +103,7 @@ def convert_schema(obj, schema_type):
         out = subprocess.run(
             YARN_CMD + ["json2ts", "--unreachableDefinitions"],
             input=json.dumps(obj),
+            check=True,
             capture_output=True,
             encoding="utf-8",
         )
@@ -110,6 +112,7 @@ def convert_schema(obj, schema_type):
         out = subprocess.run(
             YARN_CMD + ["json-schema-to-zod", "-s", "/dev/stdin"],
             input=json.dumps(obj),
+            check=True,
             capture_output=True,
             encoding="utf-8",
         )
