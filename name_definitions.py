@@ -20,18 +20,27 @@ EOM = "<|endofmask|>"
 BOS = "<|endoftext|>"
 
 
-def rename_key(old_name, new_name):
+def rename_key(old_name, new_name, reorder=False):
     def rename_fn(_data_field, data, field):
-        # Shuffle the items since the order shouldn't matter anyway.
-        # This also helps make sure a diverse set of possible other
-        # definitions are seen when we have to truncate for length.
-        random_items = random.sample(list(data[field].items()), len(data[field]))
+        if reorder:
+            # Shuffle the items since the order shouldn't matter anyway.
+            # This also helps make sure a diverse set of possible other
+            # definitions are seen when we have to truncate for length.
+            random_items = random.sample(list(data[field].items()), len(data[field]))
 
-        # Build an OrderedDict to ensure the definition we're naming is first
-        # This avoids it being truncated when the block of definitions is large
-        data[field] = collections.OrderedDict(random_items)
-        data[field][new_name] = data[field].pop(old_name)
-        data[field].move_to_end(new_name, last=False)
+            # Build an OrderedDict to ensure the definition we're naming is first
+            # This avoids it being truncated when the block of definitions is large
+            data[field] = collections.OrderedDict(random_items)
+            data[field][new_name] = data[field].pop(old_name)
+            data[field].move_to_end(new_name, last=False)
+        else:
+            new_field = collections.OrderedDict()
+            for k, v in data[field].items():
+                if k == old_name:
+                    new_field[new_name] = v
+                else:
+                    new_field[k] = v
+            data[field] = new_field
 
     return rename_fn
 
@@ -181,10 +190,10 @@ def replace_references(obj, old_path, new_path):
         obj = copy.deepcopy(obj)
         if "$ref" in obj and obj["$ref"] == path_to_ref(old_path):
             obj["$ref"] = path_to_ref(new_path)
-        return {
-            key: replace_references(value, old_path, new_path)
+        return collections.OrderedDict(
+            (key, replace_references(value, old_path, new_path))
             for key, value in obj.items()
-        }
+        )
     elif isinstance(obj, list):
         return [replace_references(item, old_path, new_path) for item in obj]
     else:
@@ -194,7 +203,8 @@ def replace_references(obj, old_path, new_path):
 def generate_defn_name(schema, defn_path, model, tokenizer, device):
     # Rename the definition with our sentinel token
     renamed_schema = defn_path.left.update_or_create(
-        copy.deepcopy(schema), rename_key(str(defn_path.right), SPLIT_TOKEN)
+        copy.deepcopy(schema),
+        rename_key(str(defn_path.right), SPLIT_TOKEN, reorder=True),
     )
     defn = defn_path.left.find(renamed_schema)[0].value
 
@@ -226,7 +236,7 @@ def main():
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
 
     json_str = sys.stdin.read()
-    obj = json.loads(json_str)
+    obj = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(json_str)
 
     # Load model
     sys.stderr.write("Loading model…\n")
