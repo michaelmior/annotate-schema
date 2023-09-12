@@ -257,12 +257,11 @@ class TinyModel(torch.nn.Module):
         return x
 
 
-def calc_val_stats(model, val_data, loss_fn, accuracy_fn):
+def calc_val_stats(model, val_data, batch_size, loss_fn, accuracy_fn):
     model.eval()
 
     # Load validation data in a single batch
-    val_dataloader = torch.utils.data.DataLoader(val_data, batch_size=100000)
-    assert len(val_dataloader) == 1
+    val_dataloader = torch.utils.data.DataLoader(val_data, batch_size=batch_size)
 
     loss = 0
     accuracy = 0
@@ -354,7 +353,9 @@ def main():
                 wandb.log({"loss": loss.item(), "acc": accuracy.item()})
 
         # Calculate validation loss and accuracy
-        (val_loss, val_acc) = calc_val_stats(tinymodel, val_data, loss_fn, accuracy_fn)
+        (val_loss, val_acc) = calc_val_stats(
+            tinymodel, val_data, config["batch_size"], loss_fn, accuracy_fn
+        )
         wandb.log({"val_loss": val_loss, "val_acc": val_acc})
         print(f"\nValidation loss: {val_loss:.4f}, accuracy {val_acc:.4f}")
 
