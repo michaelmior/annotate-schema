@@ -1,3 +1,4 @@
+import argparse
 import collections
 import copy
 import glob
@@ -66,57 +67,75 @@ def write_obj(obj, keyword, is_neg):
         print(json.dumps({"obj": obj, "keyword": keyword, "is_neg": is_neg}))
 
 
-# Loop over all schemas
-if len(sys.argv) < 2:
-    schemas = glob.glob("schemas/*.json")
-else:
-    schemas = sys.argv[1:]
+def get_examples(data):
+    neg_pos = collections.defaultdict(lambda: ([], []))
+    for keyword_type, keywords in KEYWORDS.items():
+        # Find all schema elements with the given type
+        found_paths = find_type_paths(data, keyword_type)
+        for found_path in found_paths:
+            try:
+                path = jsonpath_ng.parse(found_path).find(data)
+            except jsonpath_ng.exceptions.JsonPathLexerError:
+                # This path is invalid, probably because it's not properly
+                # escaped. We ignore for now since this is rare.
+                sys.stderr.write("Invalid path: " + found_path + "\n")
+                continue
 
-for file in tqdm.tqdm(schemas):
-    with open(file) as f:
-        try:
-            data = json.load(f)
-        except json.decoder.JSONDecodeError:
-            sys.stderr.write("Invalid JSON: " + file + "\n")
-            continue
+            for found_obj in path:
+                # Get the name of the key which is the last part of the path
+                name = found_path.split(".")[-1].strip('"')
+                found_obj = {name: found_obj.value}
 
-        neg_pos = collections.defaultdict(lambda: ([], []))
-        for keyword_type, keywords in KEYWORDS.items():
-            # Find all schema elements with the given type
-            found_paths = find_type_paths(data, keyword_type)
-            for found_path in found_paths:
-                try:
-                    path = jsonpath_ng.parse(found_path).find(data)
-                except jsonpath_ng.exceptions.JsonPathLexerError:
-                    # This path is invalid, probably because it's not properly
-                    # escaped. We ignore for now since this is rare.
-                    sys.stderr.write("Invalid path: " + found_path + "\n")
-                    continue
+                # For each keyword, check if it is included
+                for keyword in keywords:
+                    # Append to the 1st or 2nd list depending on
+                    # whether the keyword is used in this object
+                    has_keyword = keyword in next(iter(found_obj.values()))
+                    neg_pos[keyword][has_keyword].append(found_obj)
 
-                for found_obj in path:
-                    # Get the name of the key which is the last part of the path
-                    name = found_path.split(".")[-1].strip('"')
-                    found_obj = {name: found_obj.value}
+    return neg_pos
 
-                    # For each keyword, check if it is included
-                    for keyword in keywords:
-                        # Append to the 1st or 2nd list depending on
-                        # whether the keyword is used in this object
-                        has_keyword = keyword in next(iter(found_obj.values()))
-                        neg_pos[keyword][has_keyword].append(found_obj)
 
-        for keyword, (neg, pos) in neg_pos.items():
-            # Only include cases where we have at least
-            # two positive and negative examples
-            if len(pos) > 1 and len(neg) > 1:
-                # Write out the positive and negative examples
-                for pos_item in pos:
-                    # Here we need to remove the keyword being trained on
-                    item_copy = copy.deepcopy(pos_item)
-                    next(iter(item_copy.values())).pop(keyword)
+def write_examples(neg_pos):
+    for keyword, (neg, pos) in neg_pos.items():
+        # Only include cases where we have at least
+        # two positive and negative examples
+        if len(pos) > 1 and len(neg) > 1:
+            # Write out the positive and negative examples
+            for pos_item in pos:
+                # Here we need to remove the keyword being trained on
+                item_copy = copy.deepcopy(pos_item)
+                next(iter(item_copy.values())).pop(keyword)
 
-                    write_obj(item_copy, keyword, False)
+                write_obj(item_copy, keyword, False)
 
-                # For negative items, generate at most the number of positives
-                for neg_item in random.sample(neg, min(len(pos), len(neg))):
-                    write_obj(neg_item, keyword, True)
+            # For negative items, generate at most the number of positives
+            for neg_item in random.sample(neg, min(len(pos), len(neg))):
+                write_obj(neg_item, keyword, True)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("schemas", nargs="*", metavar="schema")
+    args = parser.parse_args()
+
+    # Loop over all schemas
+    if args.schemas:
+        schemas = args.schemas
+    else:
+        schemas = glob.glob("schemas/*.json")
+
+    for file in tqdm.tqdm(schemas):
+        with open(file) as f:
+            try:
+                data = json.load(f)
+            except json.decoder.JSONDecodeError:
+                sys.stderr.write("Invalid JSON: " + file + "\n")
+                continue
+
+            neg_pos = get_examples(data)
+            write_examples(neg_pos)
+
+
+if __name__ == "__main__":
+    main()
