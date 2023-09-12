@@ -305,7 +305,7 @@ def main():
         "split_seed": args.split_seed,
     }
 
-    # Build an encoder for generating the ibput
+    # Build an encoder for generating the input
     starencoder = StarEncoder("cuda:0", 10000, 1024)
 
     # Prepare to load the dataset
