@@ -12,7 +12,7 @@ from tqdm import tqdm
 from annotate_schema import get_all_paths
 
 
-def compare_objects(obj1, obj2, score_func):
+def compare_descriptions(obj1, obj2, score_func):
     cands = []
     refs = []
 
@@ -27,6 +27,18 @@ def compare_objects(obj1, obj2, score_func):
 
         cands.append(desc_path.find(obj1)[0].value)
         refs.append(desc_path.find(obj2)[0].value)
+
+    return score_func(cands, refs)
+
+
+def compare_definitions(obj1, obj2, score_func):
+    cands = []
+    refs = []
+
+    for defn_key in ("definitions", "$defs"):
+        cands.extend(obj1.get(defn_key, {}).keys())
+        refs.extend(obj2.get(defn_key, {}).keys())
+        assert len(cands) == len(refs)
 
     return score_func(cands, refs)
 
@@ -88,6 +100,8 @@ if __name__ == "__main__":
         default="cosine",
         choices=["cosine", "bertscore", "bleu", "meteor"],
     )
+    parser.add_argument("-d", "--descriptions", default=False, action="store_true")
+    parser.add_argument("-n", "--definitions", default=False, action="store_true")
     args = parser.parse_args()
 
     # Select the desired scorer
@@ -104,4 +118,7 @@ if __name__ == "__main__":
     obj2 = json.load(open(args.reference))
 
     # Print similarity
-    print(compare_objects(obj1, obj2, score_func))
+    if args.descriptions:
+        print("Descriptions: ", compare_descriptions(obj1, obj2, score_func))
+    if args.definitions:
+        print(" Definitions: ", compare_definitions(obj1, obj2, score_func))
