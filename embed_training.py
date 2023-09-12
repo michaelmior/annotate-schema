@@ -283,6 +283,7 @@ def calc_val_stats(model, val_data, batch_size, loss_fn, accuracy_fn):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("training_data")
+    parser.add_argument("validation_data", nargs="?")
     parser.add_argument("-l", "--learning-rate", default=0.001, type=float)
     parser.add_argument("-n", "--num-epochs", default=100, type=int)
     parser.add_argument("-d", "--dropout-rate", default=0.2, type=float)
@@ -291,6 +292,7 @@ def main():
     parser.add_argument("-b", "--batch-size", default=256, type=int)
     parser.add_argument("--split-seed", default=42, type=int)
     parser.add_argument("-o", "--output-file", default="model.pt")
+    parser.add_argument("-t", "--training-split", default=1.0, type=float)
 
     args = parser.parse_args()
 
@@ -309,10 +311,24 @@ def main():
 
     # Prepare to load the dataset
     data = FileDataset(config, starencoder, args.training_data)
-    split_generator = torch.Generator().manual_seed(config["split_seed"])
-    train_data, val_data = torch.utils.data.random_split(
-        data, [0.8, 0.2], generator=split_generator
-    )
+
+    # Optionally perform train/test split
+    if args.training_split < 0 or args.training_split > 1:
+        parser.error("Invalid training split")
+    elif args.training_split != 1.0:
+        split_generator = torch.Generator().manual_seed(config["split_seed"])
+        train_data, val_data = torch.utils.data.random_split(
+            data,
+            [args.training_split, 1 - args.training_split],
+            generator=split_generator,
+        )
+    else:
+        train_data = data
+        if args.validation_data:
+            val_data = FileDataset(config, starencoder, args.validation_data)
+        else:
+            val_data = None
+
     dataloader = torch.utils.data.DataLoader(
         train_data, batch_size=config["batch_size"], shuffle=True
     )
@@ -353,11 +369,12 @@ def main():
                 wandb.log({"loss": loss.item(), "acc": accuracy.item()})
 
         # Calculate validation loss and accuracy
-        (val_loss, val_acc) = calc_val_stats(
-            tinymodel, val_data, config["batch_size"], loss_fn, accuracy_fn
-        )
-        wandb.log({"val_loss": val_loss, "val_acc": val_acc})
-        print(f"\nValidation loss: {val_loss:.4f}, accuracy {val_acc:.4f}")
+        if val_data:
+            (val_loss, val_acc) = calc_val_stats(
+                tinymodel, val_data, config["batch_size"], loss_fn, accuracy_fn
+            )
+            wandb.log({"val_loss": val_loss, "val_acc": val_acc})
+            print(f"\nValidation loss: {val_loss:.4f}, accuracy {val_acc:.4f}")
 
     torch.save(tinymodel.state_dict(), args.output_file)
     wandb.save(args.output_file)
