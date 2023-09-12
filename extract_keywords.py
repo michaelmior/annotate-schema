@@ -6,6 +6,7 @@ import json
 import random
 import sys
 
+import json5
 import jsonpath_ng.ext
 import tqdm
 
@@ -128,7 +129,7 @@ def main():
     for file in tqdm.tqdm(schemas):
         with open(file) as f:
             try:
-                data = json.load(f)
+                data = json5.load(f)
             except json.decoder.JSONDecodeError:
                 sys.stderr.write("Invalid JSON: " + file + "\n")
                 continue

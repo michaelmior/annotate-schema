@@ -20,6 +20,7 @@ nltk = "*"
 torchmetrics = "*"
 wandb = "*"
 datasets = "*"
+json5 = "*"
 
 [dev-packages]
 
