@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
+import argparse
 import json
 import linecache
 import random
-import sys
 from typing import Dict, List, Union
 
 import torch
@@ -257,87 +257,110 @@ class TinyModel(torch.nn.Module):
         return x
 
 
-def calc_val_loss(model, val_data):
+def calc_val_stats(model, val_data, loss_fn, accuracy_fn):
     model.eval()
 
     # Load validation data in a single batch
     val_dataloader = torch.utils.data.DataLoader(val_data, batch_size=100000)
     assert len(val_dataloader) == 1
-    X_batch, y_batch = next(iter(dataloader))
 
+    loss = 0
+    accuracy = 0
+    batches = 0
     with torch.no_grad():
-        # Round off to undo smoothing
-        y_batch = torch.round(y_batch)
+        for X_batch, y_batch in val_dataloader:
+            # Round off to undo smoothing
+            y_batch = torch.round(y_batch)
 
-        y_pred = model(X_batch).squeeze(1)
-        loss = loss_fn(y_pred, y_batch).item()
-        accuracy = accuracy_fn(y_pred, y_batch).item()
-        model.train()
-        return (loss, accuracy)
+            y_pred = model(X_batch).squeeze(1)
+            loss += loss_fn(y_pred, y_batch).item()
+            accuracy += accuracy_fn(y_pred, y_batch).item()
+            batches += 1
+
+    model.train()
+    return (loss / batches, accuracy / batches)
 
 
-config = {
-    "learning_rate": 0.001,
-    "n_epochs": 100,
-    "dropout_rate": 0.2,
-    "hidden_layer_size": 400,
-    "smoothing_epsilon": 0,
-    "batch_size": 256,
-    "split_seed": 42,
-}
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("training_data")
+    parser.add_argument("-l", "--learning-rate", default=0.001, type=float)
+    parser.add_argument("-n", "--num-epochs", default=100, type=int)
+    parser.add_argument("-d", "--dropout-rate", default=0.2, type=float)
+    parser.add_argument("--hidden-layer-size", default=400, type=int)
+    parser.add_argument("-s", "--smoothing-epsilon", default=0, type=float)
+    parser.add_argument("-b", "--batch-size", default=256, type=int)
+    parser.add_argument("--split-seed", default=42, type=int)
+    parser.add_argument("-o", "--output-file", default="model.pt")
 
-# Build an encoder for generating the ibput
-starencoder = StarEncoder("cuda:0", 10000, 1024)
+    args = parser.parse_args()
 
-# Prepare to load the dataset
-data = FileDataset(config, starencoder, sys.argv[1])
-split_generator = torch.Generator().manual_seed(config["split_seed"])
-train_data, val_data = torch.utils.data.random_split(
-    data, [0.8, 0.2], generator=split_generator
-)
-dataloader = torch.utils.data.DataLoader(
-    train_data, batch_size=config["batch_size"], shuffle=True
-)
+    config = {
+        "learning_rate": args.learning_rate,
+        "n_epochs": args.num_epochs,
+        "dropout_rate": args.dropout_rate,
+        "hidden_layer_size": args.hidden_layer_size,
+        "smoothing_epsilon": args.smoothing_epsilon,
+        "batch_size": args.batch_size,
+        "split_seed": args.split_seed,
+    }
 
-tinymodel = TinyModel(config).to("cuda:0")
+    # Build an encoder for generating the ibput
+    starencoder = StarEncoder("cuda:0", 10000, 1024)
 
-# Initialize the wandb experiment
-wandb.init(
-    project="embed-training",
-    config=config,
-)
-wandb.define_metric("loss", summary="min")
-wandb.define_metric("acc", summary="max")
-wandb.define_metric("val_loss", summary="min")
-wandb.define_metric("val_acc", summary="max")
-wandb.watch(tinymodel, log_freq=50)
+    # Prepare to load the dataset
+    data = FileDataset(config, starencoder, args.training_data)
+    split_generator = torch.Generator().manual_seed(config["split_seed"])
+    train_data, val_data = torch.utils.data.random_split(
+        data, [0.8, 0.2], generator=split_generator
+    )
+    dataloader = torch.utils.data.DataLoader(
+        train_data, batch_size=config["batch_size"], shuffle=True
+    )
 
-loss_fn = torch.nn.BCELoss()
-accuracy_fn = torchmetrics.Accuracy(task="binary").to("cuda:0")
-optimizer = torch.optim.AdamW(tinymodel.parameters(), lr=config["learning_rate"])
-tinymodel.train()
-for epoch in tqdm.tqdm(range(config["n_epochs"]), desc="Epoch", position=0):
-    pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
-    for batch_num, (X_batch, y_batch) in enumerate(pbar):
-        y_pred = tinymodel(X_batch).squeeze(1)
-        loss = loss_fn(y_pred, y_batch)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    tinymodel = TinyModel(config).to("cuda:0")
 
-        # Calculate the accuracy (rounding to undo smoothing)
-        accuracy = accuracy_fn(y_pred, torch.round(y_batch))
+    # Initialize the wandb experiment
+    wandb.init(
+        project="embed-training",
+        config=config,
+    )
+    wandb.define_metric("loss", summary="min")
+    wandb.define_metric("acc", summary="max")
+    wandb.define_metric("val_loss", summary="min")
+    wandb.define_metric("val_acc", summary="max")
+    wandb.watch(tinymodel, log_freq=50)
 
-        pbar.set_postfix(loss=loss.item(), acc=accuracy.item())
+    loss_fn = torch.nn.BCELoss()
+    accuracy_fn = torchmetrics.Accuracy(task="binary").to("cuda:0")
+    optimizer = torch.optim.AdamW(tinymodel.parameters(), lr=config["learning_rate"])
+    tinymodel.train()
+    for epoch in tqdm.tqdm(range(config["n_epochs"]), desc="Epoch", position=0):
+        pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
+        for batch_num, (X_batch, y_batch) in enumerate(pbar):
+            y_pred = tinymodel(X_batch).squeeze(1)
+            loss = loss_fn(y_pred, y_batch)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        # Periodically log loss and accuracy
-        if batch_num % 10 == 0:
-            wandb.log({"loss": loss.item(), "acc": accuracy.item()})
+            # Calculate the accuracy (rounding to undo smoothing)
+            accuracy = accuracy_fn(y_pred, torch.round(y_batch))
 
-    # Calculate validation loss and accuracy
-    (val_loss, val_acc) = calc_val_loss(tinymodel, val_data)
-    wandb.log({"val_loss": val_loss, "val_acc": val_acc})
-    print(f"\nValidation loss: {val_loss:.4f}, accuracy {val_acc:.4f}")
+            pbar.set_postfix(loss=loss.item(), acc=accuracy.item())
 
-torch.save(tinymodel.state_dict(), "model.pt")
-wandb.save("model.pt")
+            # Periodically log loss and accuracy
+            if batch_num % 10 == 0:
+                wandb.log({"loss": loss.item(), "acc": accuracy.item()})
+
+        # Calculate validation loss and accuracy
+        (val_loss, val_acc) = calc_val_stats(tinymodel, val_data, loss_fn, accuracy_fn)
+        wandb.log({"val_loss": val_loss, "val_acc": val_acc})
+        print(f"\nValidation loss: {val_loss:.4f}, accuracy {val_acc:.4f}")
+
+    torch.save(tinymodel.state_dict(), args.output_file)
+    wandb.save(args.output_file)
+
+
+if __name__ == "__main__":
+    main()
