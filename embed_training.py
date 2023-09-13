@@ -280,52 +280,25 @@ def calc_val_stats(model, val_data, batch_size, loss_fn, accuracy_fn):
     return (loss / batches, accuracy / batches)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("training_data")
-    parser.add_argument("validation_data", nargs="?")
-    parser.add_argument("-l", "--learning-rate", default=0.001, type=float)
-    parser.add_argument("-n", "--num-epochs", default=100, type=int)
-    parser.add_argument("-d", "--dropout-rate", default=0.2, type=float)
-    parser.add_argument("--hidden-layer-size", default=400, type=int)
-    parser.add_argument("-s", "--smoothing-epsilon", default=0, type=float)
-    parser.add_argument("-b", "--batch-size", default=256, type=int)
-    parser.add_argument("--split-seed", default=42, type=int)
-    parser.add_argument("-o", "--output-file", default="model.pt")
-    parser.add_argument("-t", "--training-split", default=1.0, type=float)
-
-    args = parser.parse_args()
-
-    config = {
-        "learning_rate": args.learning_rate,
-        "n_epochs": args.num_epochs,
-        "dropout_rate": args.dropout_rate,
-        "hidden_layer_size": args.hidden_layer_size,
-        "smoothing_epsilon": args.smoothing_epsilon,
-        "batch_size": args.batch_size,
-        "split_seed": args.split_seed,
-    }
-
+def run(training_data, validation_data, training_split, config):
     # Build an encoder for generating the input
     starencoder = StarEncoder("cuda:0", 10000, 1024)
 
     # Prepare to load the dataset
-    data = FileDataset(config, starencoder, args.training_data)
+    data = FileDataset(config, starencoder, training_data)
 
     # Optionally perform train/test split
-    if args.training_split < 0 or args.training_split > 1:
-        parser.error("Invalid training split")
-    elif args.training_split != 1.0:
+    if training_split != 1.0:
         split_generator = torch.Generator().manual_seed(config["split_seed"])
         train_data, val_data = torch.utils.data.random_split(
             data,
-            [args.training_split, 1 - args.training_split],
+            [training_split, 1 - training_split],
             generator=split_generator,
         )
     else:
         train_data = data
-        if args.validation_data:
-            val_data = FileDataset(config, starencoder, args.validation_data)
+        if validation_data:
+            val_data = FileDataset(config, starencoder, validation_data)
         else:
             val_data = None
 
@@ -375,6 +348,43 @@ def main():
             )
             wandb.log({"val_loss": val_loss, "val_acc": val_acc})
             print(f"\nValidation loss: {val_loss:.4f}, accuracy {val_acc:.4f}")
+
+    return tinymodel
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("training_data")
+    parser.add_argument("validation_data", nargs="?")
+    parser.add_argument("-l", "--learning-rate", default=0.001, type=float)
+    parser.add_argument("-n", "--num-epochs", default=100, type=int)
+    parser.add_argument("-d", "--dropout-rate", default=0.2, type=float)
+    parser.add_argument("--hidden-layer-size", default=400, type=int)
+    parser.add_argument("-s", "--smoothing-epsilon", default=0, type=float)
+    parser.add_argument("-b", "--batch-size", default=256, type=int)
+    parser.add_argument("--split-seed", default=42, type=int)
+    parser.add_argument("-o", "--output-file", default="model.pt")
+    parser.add_argument("-t", "--training-split", default=1.0, type=float)
+
+    args = parser.parse_args()
+
+    config = {
+        "learning_rate": args.learning_rate,
+        "n_epochs": args.num_epochs,
+        "dropout_rate": args.dropout_rate,
+        "hidden_layer_size": args.hidden_layer_size,
+        "smoothing_epsilon": args.smoothing_epsilon,
+        "batch_size": args.batch_size,
+        "split_seed": args.split_seed,
+    }
+
+    # Check for valid training split
+    if args.training_split < 0 or args.training_split > 1:
+        parser.error("Invalid training split")
+
+    tinymodel = run(
+        args.training_data, args.validation_data, args.training_split, config
+    )
 
     torch.save(tinymodel.state_dict(), args.output_file)
     wandb.save(args.output_file)
