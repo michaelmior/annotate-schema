@@ -280,7 +280,33 @@ def calc_val_stats(model, val_data, batch_size, loss_fn, accuracy_fn):
     return (loss / batches, accuracy / batches)
 
 
-def run(training_data, validation_data, training_split, config):
+def sweep_config():
+    return {
+        "method": "random",
+        "metric": {"goal": "minimize", "name": "val_loss"},
+        "early_terminate": {"type": "hyperband", "min_iter": 1},
+        "parameters": {
+            "learning_rate": {"min": 0.001, "max": 0.01},
+            "num_epochs": {"values": [50, 100, 200]},
+            "dropout_rate": {"min": 0.1, "max": 0.8},
+            "hidden_layer_size": {"min": 100, "max": 500},
+            "smoothing_epsilon": {"min": 0.1, "max": 0.3},
+            "batch_size": {"values": [8, 16, 32, 64, 128, 256]},
+        },
+    }
+
+
+def run(training_data, validation_data, training_split, config=None):
+    # Initialize the wandb experiment
+    if config:
+        wandb.init(
+            project="embed-training",
+            config=config,
+        )
+    else:
+        wandb.init()
+        config = wandb.config
+
     # Build an encoder for generating the input
     starencoder = StarEncoder("cuda:0", 10000, 1024)
 
@@ -308,11 +334,7 @@ def run(training_data, validation_data, training_split, config):
 
     tinymodel = TinyModel(config).to("cuda:0")
 
-    # Initialize the wandb experiment
-    wandb.init(
-        project="embed-training",
-        config=config,
-    )
+    # Define wandb metrics
     wandb.define_metric("loss", summary="min")
     wandb.define_metric("acc", summary="max")
     wandb.define_metric("val_loss", summary="min")
@@ -323,7 +345,7 @@ def run(training_data, validation_data, training_split, config):
     accuracy_fn = torchmetrics.Accuracy(task="binary").to("cuda:0")
     optimizer = torch.optim.AdamW(tinymodel.parameters(), lr=config["learning_rate"])
     tinymodel.train()
-    for epoch in tqdm.tqdm(range(config["n_epochs"]), desc="Epoch", position=0):
+    for epoch in tqdm.tqdm(range(config["num_epochs"]), desc="Epoch", position=0):
         pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
         for batch_num, (X_batch, y_batch) in enumerate(pbar):
             y_pred = tinymodel(X_batch).squeeze(1)
@@ -365,29 +387,55 @@ def main():
     parser.add_argument("--split-seed", default=42, type=int)
     parser.add_argument("-o", "--output-file", default="model.pt")
     parser.add_argument("-t", "--training-split", default=1.0, type=float)
+    parser.add_argument("--sweep", default=False, action="store_true")
+    parser.add_argument("--sweep-count", default=None, type=int)
 
     args = parser.parse_args()
 
-    config = {
-        "learning_rate": args.learning_rate,
-        "n_epochs": args.num_epochs,
-        "dropout_rate": args.dropout_rate,
-        "hidden_layer_size": args.hidden_layer_size,
-        "smoothing_epsilon": args.smoothing_epsilon,
-        "batch_size": args.batch_size,
-        "split_seed": args.split_seed,
-    }
+    # Validate sweep configuration
+    if args.sweep_count is not None:
+        if not args.sweep:
+            parser.error("Can't specify sweep count without enabling sweep")
+        if args.sweep_count <= 0:
+            parser.error("Invalid sweep count")
 
     # Check for valid training split
     if args.training_split < 0 or args.training_split > 1:
         parser.error("Invalid training split")
 
-    tinymodel = run(
-        args.training_data, args.validation_data, args.training_split, config
-    )
+    if args.sweep:
+        # TODO: Merge CLI parameters with sweep config
 
-    torch.save(tinymodel.state_dict(), args.output_file)
-    wandb.save(args.output_file)
+        # Run a hyperparameter sweep
+        # For now we don't attempt to save any models here and we'll
+        # just have to retrain with the optimal hyperparameters
+        sweep_id = wandb.sweep(sweep_config(), project="embed-training")
+        wandb.agent(
+            sweep_id,
+            function=lambda: run(
+                args.training_data,
+                args.validation_data,
+                args.training_split,
+            ),
+            count=args.sweep_count,
+        )
+    else:
+        config = {
+            "learning_rate": args.learning_rate,
+            "num_epochs": args.num_epochs,
+            "dropout_rate": args.dropout_rate,
+            "hidden_layer_size": args.hidden_layer_size,
+            "smoothing_epsilon": args.smoothing_epsilon,
+            "batch_size": args.batch_size,
+            "split_seed": args.split_seed,
+        }
+
+        tinymodel = run(
+            args.training_data, args.validation_data, args.training_split, config
+        )
+
+        torch.save(tinymodel.state_dict(), args.output_file)
+        wandb.save(args.output_file)
 
 
 if __name__ == "__main__":
