@@ -257,6 +257,25 @@ class TinyModel(torch.nn.Module):
         return x
 
 
+# From https://stackoverflow.com/a/73704579/123695
+class EarlyStopper:
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_validation_loss = float("inf")
+
+    def early_stop(self, validation_loss):
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+        elif validation_loss > (self.min_validation_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
+
 def calc_val_stats(model, val_data, batch_size, loss_fn, accuracy_fn):
     model.eval()
 
@@ -345,6 +364,7 @@ def run(training_data, validation_data, training_split, config=None):
     accuracy_fn = torchmetrics.Accuracy(task="binary").to("cuda:0")
     optimizer = torch.optim.AdamW(tinymodel.parameters(), lr=config["learning_rate"])
     tinymodel.train()
+    early_stopper = EarlyStopper(patience=5, min_delta=0.01)
     for epoch in tqdm.tqdm(range(config["num_epochs"]), desc="Epoch", position=0):
         pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
         for batch_num, (X_batch, y_batch) in enumerate(pbar):
@@ -370,6 +390,10 @@ def run(training_data, validation_data, training_split, config=None):
             )
             wandb.log({"val_loss": val_loss, "val_acc": val_acc})
             print(f"\nValidation loss: {val_loss:.4f}, accuracy {val_acc:.4f}")
+
+            # Early stopping
+            if early_stopper.early_stop(val_loss):
+                break
 
     return tinymodel
 
