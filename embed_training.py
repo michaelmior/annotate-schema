@@ -311,6 +311,8 @@ def sweep_config():
             "hidden_layer_size": {"min": 100, "max": 500},
             "smoothing_epsilon": {"min": 0.1, "max": 0.3},
             "batch_size": {"values": [8, 16, 32, 64, 128, 256]},
+            "early_stop_patience": {"value": 10},
+            "early_stop_delta": {"value": 0.01},
         },
     }
 
@@ -364,7 +366,9 @@ def run(training_data, validation_data, training_split, config=None):
     accuracy_fn = torchmetrics.Accuracy(task="binary").to("cuda:0")
     optimizer = torch.optim.AdamW(tinymodel.parameters(), lr=config["learning_rate"])
     tinymodel.train()
-    early_stopper = EarlyStopper(patience=10, min_delta=0.01)
+    early_stopper = EarlyStopper(
+        patience=config["early_stop_patience"], min_delta=config["early_stop_delta"]
+    )
     for epoch in tqdm.tqdm(range(config["num_epochs"]), desc="Epoch", position=0):
         pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
         for batch_num, (X_batch, y_batch) in enumerate(pbar):
@@ -411,6 +415,8 @@ def main():
     parser.add_argument("--split-seed", default=42, type=int)
     parser.add_argument("-o", "--output-file", default="model.pt")
     parser.add_argument("-t", "--training-split", default=1.0, type=float)
+    parser.add_argument("--early-stop-patience", default=10, type=int)
+    parser.add_argument("--early-stop-delta", default=0.01, type=float)
     parser.add_argument("--sweep", default=False, action="store_true")
     parser.add_argument("--sweep-count", default=None, type=int)
 
@@ -452,6 +458,8 @@ def main():
             "smoothing_epsilon": args.smoothing_epsilon,
             "batch_size": args.batch_size,
             "split_seed": args.split_seed,
+            "early_stop_patience": args.early_stop_patience,
+            "early_stop_delta": args.early_stop_delta,
         }
 
         tinymodel = run(
