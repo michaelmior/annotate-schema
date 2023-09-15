@@ -41,7 +41,7 @@ KEYWORDS = {
 KEYWORDS["numeric"] = KEYWORDS["integer"]
 
 
-def find_type_paths(obj, json_type, path="$"):
+def find_type_paths(obj, json_type, path=jsonpath_ng.Root()):
     if isinstance(obj, dict):
         for k, v in obj.items():
             # If we have the type keyword and it's value matches, we found one
@@ -49,23 +49,35 @@ def find_type_paths(obj, json_type, path="$"):
                 yield path
 
             # Continue recursively through the object's children
-            yield from find_type_paths(v, json_type, path + '."' + k + '"')
+            yield from find_type_paths(
+                v, json_type, jsonpath_ng.Child(path, jsonpath_ng.Fields(k))
+            )
     elif isinstance(obj, list):
         # Check each list element
         for i, v in enumerate(obj):
-            yield from find_type_paths(v, json_type, path + "[" + str(i) + "]")
+            yield from find_type_paths(
+                v, json_type, jsonpath_ng.Child(path, jsonpath_ng.Index(i))
+            )
 
 
 def write_obj(obj, keyword, is_neg):
-    # Remove the description since we generally
-    # won't have this at inference time
-    if "description" in obj:
-        obj = copy.deepcopy(obj)
-        obj.pop("description")
-
     # Skip any objects that are too large
     if len(json.dumps(obj, indent=4)) <= 1024:
         print(json.dumps({"obj": obj, "keyword": keyword, "is_neg": is_neg}))
+
+
+def build_obj(path, value):
+    # Build an object with the same shape it has in the entire document
+    # For example, a path of $.foo.bar[0] would create an object
+    # that looks like {"foo": {"bar": [value]}}
+    if isinstance(path, jsonpath_ng.Root):
+        return value
+    if isinstance(path.right, (jsonpath_ng.Index, jsonpath_ng.Slice)):
+        return build_obj(path.left, [value])
+    elif isinstance(path.right, jsonpath_ng.Fields):
+        return build_obj(path.left, {path.right.fields[0]: value})
+    else:
+        return value
 
 
 def get_examples(data):
@@ -74,25 +86,23 @@ def get_examples(data):
         # Find all schema elements with the given type
         found_paths = find_type_paths(data, keyword_type)
         for found_path in found_paths:
-            try:
-                path = jsonpath_ng.parse(found_path).find(data)
-            except jsonpath_ng.exceptions.JsonPathLexerError:
-                # This path is invalid, probably because it's not properly
-                # escaped. We ignore for now since this is rare.
-                sys.stderr.write("Invalid path: " + found_path + "\n")
-                continue
-
-            for found_obj in path:
-                # Get the name of the key which is the last part of the path
-                name = found_path.split(".")[-1].strip('"')
-                found_obj = {name: found_obj.value}
-
+            for found_obj in found_path.find(data):
                 # For each keyword, check if it is included
                 for keyword in keywords:
                     # Append to the 1st or 2nd list depending on
                     # whether the keyword is used in this object
-                    has_keyword = keyword in next(iter(found_obj.values()))
-                    neg_pos[keyword][has_keyword].append(found_obj)
+                    has_keyword = keyword in found_obj.value
+                    obj_without_keyword = copy.deepcopy(found_obj.value)
+
+                    # Remove the keyword since we can't use it to predict
+                    obj_without_keyword.pop(keyword, None)
+
+                    # Remove the description since we generally
+                    # won't have this at inference time
+                    obj_without_keyword.pop("description", None)
+
+                    path_obj = build_obj(found_path, obj_without_keyword)
+                    neg_pos[keyword][has_keyword].append(path_obj)
 
     return neg_pos
 
@@ -104,11 +114,7 @@ def write_examples(neg_pos):
         if len(pos) > 1 and len(neg) > 1:
             # Write out the positive and negative examples
             for pos_item in pos:
-                # Here we need to remove the keyword being trained on
-                item_copy = copy.deepcopy(pos_item)
-                next(iter(item_copy.values())).pop(keyword)
-
-                write_obj(item_copy, keyword, False)
+                write_obj(pos_item, keyword, False)
 
             # For negative items, generate at most the number of positives
             for neg_item in random.sample(neg, min(len(pos), len(neg))):
