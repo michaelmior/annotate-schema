@@ -364,7 +364,7 @@ def run(training_data, validation_data, training_split, config=None):
     accuracy_fn = torchmetrics.Accuracy(task="binary").to("cuda:0")
     optimizer = torch.optim.AdamW(tinymodel.parameters(), lr=config["learning_rate"])
     tinymodel.train()
-    early_stopper = EarlyStopper(patience=5, min_delta=0.01)
+    early_stopper = EarlyStopper(patience=10, min_delta=0.01)
     for epoch in tqdm.tqdm(range(config["num_epochs"]), desc="Epoch", position=0):
         pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
         for batch_num, (X_batch, y_batch) in enumerate(pbar):
