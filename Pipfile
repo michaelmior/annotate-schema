@@ -13,7 +13,6 @@ tqdm = "*"
 accelerate = "*"
 tiktoken = "*"
 datamodel-code-generator = "*"
-scipy = "*"
 auto-gptq = "==0.3.1"
 bert-score = "*"
 nltk = "*"
@@ -23,7 +22,7 @@ datasets = "*"
 json5 = "*"
 wordninja = "*"
 numpy = "*"
-pyemd = "*"
+nlg-metricverse = "*"
 
 [dev-packages]
 
