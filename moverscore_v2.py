@@ -17,26 +17,41 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 
 device = "cuda"
+model_name = None
+model = None
+tokenizer = None
 
-if os.environ.get("MOVERSCORE_MODEL"):
-    model_name = os.environ.get("MOVERSCORE_MODEL")
-else:
-    model_name = "distilbert-base-uncased"
-tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=True)
-model = AutoModel.from_pretrained(
-    model_name, output_hidden_states=True, output_attentions=True
-)
-model.eval()
-model.to(device)
+
+def load_model():
+    global model_name, model, tokenizer
+
+    if os.environ.get("MOVERSCORE_MODEL"):
+        model_name = os.environ.get("MOVERSCORE_MODEL")
+    else:
+        model_name = "distilbert-base-uncased"
+    tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=True)
+    model = AutoModel.from_pretrained(
+        model_name, output_hidden_states=True, output_attentions=True
+    )
+    model.eval()
+    model.to(device)
 
 
 def truncate(tokens):
+    global tokenizer
+    if tokenizer is None:
+        load_model()
+
     if len(tokens) > tokenizer.model_max_length - 2:
         tokens = tokens[0 : (tokenizer.model_max_length - 2)]
     return tokens
 
 
 def process(a):
+    global tokenizer
+    if tokenizer is None:
+        load_model()
+
     a = ["[CLS]"] + truncate(tokenizer.tokenize(a)) + ["[SEP]"]
     a = tokenizer.convert_tokens_to_ids(a)
     return set(a)
@@ -70,6 +85,10 @@ def padding(arr, pad_token, dtype=torch.long):
 
 
 def bert_encode(model, x, attention_mask):
+    global model_name
+    if model_name is None:
+        load_model()
+
     model.eval()
     with torch.no_grad():
         result = model(x, attention_mask=attention_mask)
@@ -157,6 +176,10 @@ def word_mover_score(
     batch_size=256,
     device="cuda:0",
 ):
+    global model
+    if model is None or tokenizer is None:
+        load_model()
+
     preds = []
     for batch_start in range(0, len(refs), batch_size):
         batch_refs = refs[batch_start : batch_start + batch_size]
@@ -216,6 +239,10 @@ def word_mover_score(
 
 
 def plot_example(is_flow, reference, translation, device="cuda:0"):
+    global model
+    if model is None or tokenizer is None:
+        load_model()
+
     idf_dict_ref = defaultdict(lambda: 1.0)
     idf_dict_hyp = defaultdict(lambda: 1.0)
 
