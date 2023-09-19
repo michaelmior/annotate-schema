@@ -1,5 +1,7 @@
 import argparse
 import json
+import re
+import string
 
 import bert_score
 import jsonpath_ng
@@ -8,8 +10,36 @@ import torch
 from scipy.spatial.distance import cosine
 from transformers import AutoModel, AutoTokenizer
 from tqdm import tqdm
+import wordninja
 
 from annotate_schema import get_all_paths
+
+
+# See https://stackoverflow.com/a/29920015
+def camel_case_split(identifier):
+    matches = re.finditer(
+        ".+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)", identifier
+    )
+    return [m.group(0) for m in matches]
+
+
+def split_token(token):
+    # Try splitting by underscores
+    if "_" in token:
+        return token.split("_")
+    # Try splitting by hyphens
+    elif "-" in token:
+        return token.split("_")
+    # If camelCase, try splitting by capitals
+    elif any(c in string.ascii_lowercase for c in token) and any(
+        c in string.ascii_uppercase for c in token
+    ):
+        # Split camelCase tokens
+        return camel_case_split(token)
+    # Otherwise, we have all lower (or upper) case letters,
+    # so try to split probabilistically into English words
+    else:
+        return wordninja.split(token)
 
 
 def compare_descriptions(obj1, obj2, score_func):
@@ -44,16 +74,18 @@ def compare_definitions(obj1, obj2, score_func):
 
 
 def score_bleu(cands, refs):
-    cands_tok = list(map(nltk.tokenize.word_tokenize, cands))
-    refs_tok = [[nltk.tokenize.word_tokenize(s)] for s in refs]
+    cands_tok = list(map(split_token, cands))
+    refs_tok = [[split_token(s)] for s in refs]
+    for a, b in zip(cands_tok, refs_tok):
+        print(a, b)
     return nltk.translate.bleu_score.corpus_bleu(refs_tok, cands_tok)
 
 
 def score_meteor(cands, refs):
     sims = []
     for cand, ref in zip(cands, refs):
-        cand_tok = nltk.tokenize.word_tokenize(cand)
-        ref_tok = nltk.tokenize.word_tokenize(ref)
+        cand_tok = split_token(cand)
+        ref_tok = split_token(ref)
         sims.append(nltk.translate.meteor_score.single_meteor_score(ref_tok, cand_tok))
 
     return sum(sims) / len(sims)

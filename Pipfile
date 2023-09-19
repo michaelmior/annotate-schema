@@ -21,6 +21,7 @@ torchmetrics = "*"
 wandb = "*"
 datasets = "*"
 json5 = "*"
+wordninja = "*"
 
 [dev-packages]
 
