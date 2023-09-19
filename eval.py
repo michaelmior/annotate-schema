@@ -61,7 +61,12 @@ def compare_descriptions(obj1, obj2, scorer):
 def print_scores(header, metrics, scores):
     print(header)
     for metric in metrics:
-        print("  ", metric, ":", scores[metric]["score"])
+        print(scores[metric])
+        if metric == "nubia":
+            score_key = "nubia_score"
+        else:
+            score_key = "score"
+        print("  ", metric, ":", scores[metric][score_key])
 
 
 def compare_definitions(obj1, obj2, scorer):

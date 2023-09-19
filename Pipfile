@@ -23,6 +23,7 @@ json5 = "*"
 wordninja = "*"
 numpy = "*"
 nlg-metricverse = "*"
+nubia-score = "*"
 
 [dev-packages]
 
