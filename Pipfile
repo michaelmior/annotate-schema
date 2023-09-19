@@ -23,6 +23,7 @@ datasets = "*"
 json5 = "*"
 wordninja = "*"
 numpy = "*"
+pyemd = "*"
 
 [dev-packages]
 

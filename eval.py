@@ -1,10 +1,12 @@
 import argparse
+import collections
 import json
 import re
 import string
 
 import bert_score
 import jsonpath_ng
+from moverscore_v2 import word_mover_score
 import nltk
 import numpy as np
 import torch
@@ -103,6 +105,24 @@ def score_bartscore(cands, refs):
     return np.mean(bs.score(refs, cands))
 
 
+def score_moverscore(cands, refs):
+    scores = []
+    for r, c in zip(refs, cands):
+        idf_dict_hyp = collections.defaultdict(lambda: 1.0)
+        idf_dict_ref = collections.defaultdict(lambda: 1.0)
+        score = word_mover_score(
+            [r],
+            [c],
+            idf_dict_ref,
+            idf_dict_hyp,
+            stop_words=[],
+            n_gram=1,
+            remove_subwords=False,
+        )
+        scores.append(np.mean(score))
+    return np.mean(scores)
+
+
 def score_cosine(cands, refs):
     # Load the pretrained tokenizer and embedding models
     tokenizer = AutoTokenizer.from_pretrained(
@@ -137,7 +157,7 @@ if __name__ == "__main__":
         "--scorer",
         type=str,
         default="cosine",
-        choices=["cosine", "bertscore", "bleu", "meteor", "bartscore"],
+        choices=["cosine", "bertscore", "bleu", "meteor", "bartscore", "moverscore"],
     )
     parser.add_argument("-d", "--descriptions", default=False, action="store_true")
     parser.add_argument("-n", "--definitions", default=False, action="store_true")
@@ -151,6 +171,10 @@ if __name__ == "__main__":
         score_func = score_bleu
     elif args.scorer == "meteor":
         score_func = score_meteor
+    elif args.scorer == "bartscore":
+        score_func = score_bartscore
+    elif args.scorer == "moverscore":
+        score_func = score_moverscore
 
     # Load both objects
     obj1 = json.load(open(args.candidate))
