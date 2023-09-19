@@ -6,12 +6,14 @@ import string
 import bert_score
 import jsonpath_ng
 import nltk
+import numpy as np
 import torch
 from scipy.spatial.distance import cosine
 from transformers import AutoModel, AutoTokenizer
 from tqdm import tqdm
 import wordninja
 
+import bart_score
 from annotate_schema import get_all_paths
 
 
@@ -96,6 +98,11 @@ def score_bertscore(cands, refs):
     return float(F1.mean())
 
 
+def score_bartscore(cands, refs):
+    bs = bart_score.BARTScorer()
+    return np.mean(bs.score(refs, cands))
+
+
 def score_cosine(cands, refs):
     # Load the pretrained tokenizer and embedding models
     tokenizer = AutoTokenizer.from_pretrained(
@@ -130,7 +137,7 @@ if __name__ == "__main__":
         "--scorer",
         type=str,
         default="cosine",
-        choices=["cosine", "bertscore", "bleu", "meteor"],
+        choices=["cosine", "bertscore", "bleu", "meteor", "bartscore"],
     )
     parser.add_argument("-d", "--descriptions", default=False, action="store_true")
     parser.add_argument("-n", "--definitions", default=False, action="store_true")
