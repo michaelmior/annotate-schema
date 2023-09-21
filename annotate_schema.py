@@ -11,10 +11,10 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     GenerationConfig,
-    PreTrainedTokenizer,
-    StoppingCriteria,
 )
 from auto_gptq import AutoGPTQForCausalLM
+
+from utils import strip_generated_code, StringStoppingCriteria
 
 DESC_TAG = "!!!DESCRIPTION!!!"
 YARN_CMD = ["yarn", "run", "--silent", "--"]
@@ -51,39 +51,6 @@ def get_all_paths(obj, prefix="$"):
         if k in obj:
             for i, v in enumerate(obj[k]):
                 yield from get_all_paths(v, prefix + "." + k + "[" + str(i) + "]")
-
-
-# Adapted from jsonformer
-# https://github.com/1rgs/jsonformer/blob/bfad031876ace84ec0a7853718a1c0828ea1653a/jsonformer/logits_processors.py#L5-L23
-class StringStoppingCriteria(StoppingCriteria):
-    def __init__(
-        self, tokenizer: PreTrainedTokenizer, prompt_length: int, schema_type: str
-    ):
-        self.tokenizer = tokenizer
-        self.prompt_length = prompt_length
-        self.schema_type = schema_type
-
-    def __call__(
-        self,
-        input_ids: torch.LongTensor,
-        _,
-    ) -> bool:
-        if len(input_ids[0]) <= self.prompt_length:
-            return False
-
-        last_token_id = input_ids[0][-1:]
-        last_token = self.tokenizer.decode(last_token_id, skip_special_tokens=True)
-
-        if self.schema_type == "typescript":
-            return "*/" in last_token
-        else:
-            # Check if there is a quote in the last token
-            last_quote = last_token.rfind('"')
-            if last_quote == -1:
-                return False
-            else:
-                # If there is a quote, make sure it isn't escaped
-                return last_token[last_quote - 1] != "\\"
 
 
 def convert_schema(obj, schema_type):
@@ -153,14 +120,7 @@ def generate_description(
         y[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
     )
 
-    # Clean up the description by stripping whitespace and quote if needed
-    desc = generated_code[len(desc_str) :]
-    last_quote = desc.rfind('"')
-    if last_quote != -1 and desc[last_quote - 1] != "\\":
-        desc = desc[:last_quote]
-
-    # Clean up and return the generated description
-    return desc.split('"}')[0].strip()
+    return strip_generated_code(generated_code[len(desc_str) :])
 
 
 def main():
