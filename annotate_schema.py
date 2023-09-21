@@ -159,7 +159,8 @@ def generate_description(
     if last_quote != -1 and desc[last_quote - 1] != "\\":
         desc = desc[:last_quote]
 
-    return desc.strip()
+    # Clean up and return the generated description
+    return desc.split('"}')[0].strip()
 
 
 def main():
