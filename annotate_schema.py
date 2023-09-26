@@ -161,6 +161,9 @@ def main():
             kwargs["revision"] = "float16"
             kwargs["torch_dtype"] = torch.float16
 
+    if not args.model.startswith("bigcode/"):
+        kwargs["device_map"] = "auto"
+
     if args.model.endswith("GPTQ"):
         model = AutoGPTQForCausalLM.from_quantized(
             args.model,
@@ -172,7 +175,7 @@ def main():
         ).to(device)
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            args.model, trust_remote_code=True, device_map="auto", **kwargs
+            args.model, trust_remote_code=True, **kwargs
         ).to(device)
 
     # load tokenizer
