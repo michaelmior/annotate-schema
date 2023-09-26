@@ -11,13 +11,20 @@ from typing import List
 import jsonpath_ng
 import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, pipeline
+
+import utils
+
 
 # Uses code from https://github.com/dpfried/incoder/blob/main/example_usage.py
 
 SPLIT_TOKEN = "<|insert|>"
 EOM = "<|endofmask|>"
 BOS = "<|endoftext|>"
+FIM_PREFIX = "<fim_prefix>"
+FIM_MIDDLE = "<fim_middle>"
+FIM_SUFFIX = "<fim_suffix>"
+FIM_INDICATOR = "<FILL_HERE>"
 
 
 def rename_key(old_name, new_name, reorder=False):
@@ -200,16 +207,20 @@ def replace_references(obj, old_path, new_path):
         return obj
 
 
-def generate_defn_name(schema, defn_path, model, tokenizer, device):
-    # Rename the definition with our sentinel token
+def get_defn_template(schema, defn_path, token):
     renamed_schema = defn_path.left.update_or_create(
         copy.deepcopy(schema),
-        rename_key(str(defn_path.right), SPLIT_TOKEN, reorder=True),
+        rename_key(str(defn_path.right), token, reorder=True),
     )
     defn = defn_path.left.find(renamed_schema)[0].value
 
+    # Dump the definition as JSON
+    return json.dumps({"definitions": defn}, indent=4)[:514]
+
+
+def generate_defn_name(schema, defn_path, model, tokenizer, device):
     # We truncate the serialized JSON below to fit the model size
-    defn_str = json.dumps({"definitions": defn}, indent=4)[:514]
+    defn_str = get_defn_template(schema, defn_path, SPLIT_TOKEN)[:514]
 
     if getattr(model, "task", None) == "fill-mask":
         return model(defn_str.replace(SPLIT_TOKEN, "<mask>"))[0]["token_str"]
@@ -223,6 +234,35 @@ def generate_defn_name(schema, defn_path, model, tokenizer, device):
             new_defn_name = new_defn_name[:quote_index]
 
         return new_defn_name.strip()
+
+
+def infill_defn_name(schema, defn_path, model, tokenizer, device):
+    defn_str = get_defn_template(schema, defn_path, FIM_INDICATOR)
+    # See https://huggingface.co/spaces/bigcode/bigcode-playground/blob/main/app.py
+    prefix, suffix = defn_str.split(FIM_INDICATOR)
+    defn_str = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
+    print(defn_str)
+
+    # Encode the input and generate a description
+    x = tokenizer.encode(defn_str, return_tensors="pt").to(device)
+    y = model.generate(
+        x,
+        generation_config=GenerationConfig(
+            do_sample=True,
+            num_beams=3,
+            max_new_tokens=50,
+            pad_token_id=tokenizer.eos_token_id,
+            stopping_criteria=[utils.StringStoppingCriteria(tokenizer, len(x))],
+        ),
+    )
+    generated_code = tokenizer.decode(
+        y[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
+    )
+
+    y = model.generate(x)
+    generated_code = tokenizer.decode(y[0])
+
+    return utils.strip_generated_code(generated_code[len(defn_str) :])
 
 
 def main():
@@ -262,6 +302,18 @@ def main():
         )
         tokenizer.pad_token = "<pad>"
         tokenizer.padding_side = "left"
+    elif args.model_name.startswith("bigcode/"):
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name,
+            trust_remote_code=True,
+            device_map="auto",
+        ).to(device)
+
+        # Load tokenizer
+        sys.stderr.write("Loading tokenizer…\n")
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, trust_remote_code=True, device_map="auto"
+        )
     else:
         model = pipeline("fill-mask", model=args.model_name, device=device)
         tokenizer = None
@@ -298,7 +350,11 @@ def main():
     final_mapping = {}
     for path in tqdm(paths):
         defn_path = jsonpath_ng.parse(path)
-        defn_name = generate_defn_name(obj, defn_path, model, tokenizer, device)
+
+        if args.model_name.startswith("bigcode/"):
+            defn_name = infill_defn_name(obj, defn_path, model, tokenizer, device)
+        else:
+            defn_name = generate_defn_name(obj, defn_path, model, tokenizer, device)
 
         # Add a numerical suffix if needed
         if defn_name in new_names:
