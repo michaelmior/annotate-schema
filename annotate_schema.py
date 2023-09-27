@@ -141,6 +141,8 @@ def main():
         "--no-strip-existing", dest="strip_existing", default=True, action="store_false"
     )
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
+    parser.add_argument("-d", "--device-map-auto", default=False, action="store_true")
+    parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     args = parser.parse_args()
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
@@ -161,8 +163,10 @@ def main():
             kwargs["revision"] = "float16"
             kwargs["torch_dtype"] = torch.float16
 
-    if not args.model.startswith("bigcode/"):
+    if args.device_map_auto:
         kwargs["device_map"] = "auto"
+    if args.load_in_8bit:
+        kwargs["load_in_8bit"] = True
 
     if args.model.endswith("GPTQ"):
         model = AutoGPTQForCausalLM.from_quantized(

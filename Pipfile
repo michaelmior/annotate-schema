@@ -24,6 +24,7 @@ wordninja = "*"
 numpy = "*"
 nlg-metricverse = "*"
 nubia-score = "*"
+bitsandbytes = "*"
 
 [dev-packages]
 
