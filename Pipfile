@@ -26,6 +26,7 @@ nlg-metricverse = "*"
 nubia-score = "*"
 bitsandbytes = "*"
 optimum = "*"
+deepspeed = "*"
 
 [dev-packages]
 

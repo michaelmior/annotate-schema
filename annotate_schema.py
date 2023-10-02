@@ -1,9 +1,11 @@
 import argparse
 import copy
 import json
+import os
 import subprocess
 import sys
 
+import deepspeed
 import jsonpath_ng
 import torch
 from tqdm import tqdm
@@ -125,6 +127,7 @@ def generate_description(
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input-file", type=str, default="/dev/stdin")
     parser.add_argument(
         "-s",
         "--schema-type",
@@ -144,12 +147,29 @@ def main():
     parser.add_argument("-d", "--device-map-auto", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("--better-transformer", default=False, action="store_true")
+    parser.add_argument(
+        "--world-size", default=int(os.getenv("WORLD_SIZE", "1")), type=int
+    )
+    parser.add_argument(
+        "--local_rank", default=int(os.getenv("LOCAL_RANK", "0")), type=int
+    )
     args = parser.parse_args()
 
-    device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
+    device = (
+        "cuda:%d" % args.local_rank
+        if torch.cuda.is_available() and not args.cpu
+        else "cpu"
+    )
 
-    json_str = sys.stdin.read()
-    obj = json.loads(json_str)
+    # Set up DeepSpeed distributed inference
+    if args.world_size > 1:
+        deepspeed.init_distributed(
+            dist_backend="nccl", world_size=args.world_size, rank=args.local_rank
+        )
+
+    with open(args.input_file, "r") as f:
+        json_str = f.read()
+        obj = json.loads(json_str)
 
     assert DESC_TAG not in json_str
 
@@ -186,6 +206,17 @@ def main():
     # Convert to BetterTransformer
     if args.better_transformer:
         model = model.to_bettertransformer()
+
+    # Use DeepSpeed model
+    if args.world_size > 1:
+        ds_engine = deepspeed.init_inference(
+            model,
+            tensor_parallel={"tp_size": args.world_size},
+            dtype=torch.half,
+            checkpoint=None,
+            replace_with_kernel_inject=True,
+        )
+        model = ds_engine.module
 
     # load tokenizer
     sys.stderr.write("Loading tokenizer…\n")
