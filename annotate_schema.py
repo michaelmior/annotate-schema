@@ -143,6 +143,7 @@ def main():
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
     parser.add_argument("-d", "--device-map-auto", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
+    parser.add_argument("--better-transformer", default=False, action="store_true")
     args = parser.parse_args()
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
@@ -182,6 +183,10 @@ def main():
             args.model, trust_remote_code=True, **kwargs
         ).to(device)
 
+    # Convert to BetterTransformer
+    if args.better_transformer:
+        model = model.to_bettertransformer()
+
     # load tokenizer
     sys.stderr.write("Loading tokenizer…\n")
     tokenizer = AutoTokenizer.from_pretrained(
@@ -201,7 +206,13 @@ def main():
     for path in tqdm(paths):
         desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
         desc = generate_description(
-            obj, desc_path, args.schema_type, model, tokenizer, device, args.max_tokens
+            obj,
+            desc_path,
+            args.schema_type,
+            model,
+            tokenizer,
+            device,
+            args.max_tokens,
         )
 
         # Store this description to update later

@@ -25,6 +25,7 @@ numpy = "*"
 nlg-metricverse = "*"
 nubia-score = "*"
 bitsandbytes = "*"
+optimum = "*"
 
 [dev-packages]
 

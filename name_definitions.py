@@ -271,6 +271,7 @@ def main():
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
     parser.add_argument("-k", "--keep-existing", default=False, action="store_true")
     parser.add_argument("-o", "--output-mapping", default=False, action="store_true")
+    parser.add_argument("--better-transformer", default=False, action="store_true")
     args = parser.parse_args()
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
@@ -317,6 +318,10 @@ def main():
     else:
         model = pipeline("fill-mask", model=args.model_name, device=device)
         tokenizer = None
+
+    # Convert to BetterTransformer
+    if args.better_transformer:
+        model = model.to_bettertransformer()
 
     paths = list(get_defn_paths(obj))
 
