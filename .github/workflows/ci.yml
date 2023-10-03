@@ -28,4 +28,5 @@ jobs:
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s pydantic -i test.json
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s typescript -i test.json
           pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s zod -i test.json
-          pipenv run python eval.py -s abstractness test-desc.json test.json
+          pipenv run python name_definitions.py -m hf-internal-testing/tiny-random-BertForMaskedLM  -i test-desc.json -o test-final.json
+          pipenv run python eval.py -s abstractness -d -n test-final.json test.json

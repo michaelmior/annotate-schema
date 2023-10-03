@@ -218,12 +218,12 @@ def get_defn_template(schema, defn_path, token):
     return json.dumps({"definitions": defn}, indent=4)[:514]
 
 
-def generate_defn_name(schema, defn_path, model, tokenizer, device):
+def generate_defn_name(schema, defn_path, model, tokenizer, mask_token, device):
     # We truncate the serialized JSON below to fit the model size
     defn_str = get_defn_template(schema, defn_path, SPLIT_TOKEN)[:514]
 
     if getattr(model, "task", None) == "fill-mask":
-        return model(defn_str.replace(SPLIT_TOKEN, "<mask>"))[0]["token_str"]
+        return model(defn_str.replace(SPLIT_TOKEN, mask_token))[0]["token_str"]
     else:
         out = infill(model, tokenizer, device, defn_str.split(SPLIT_TOKEN))
         new_defn_name = out["infills"][0]
@@ -364,7 +364,13 @@ def main():
         if args.model_name.startswith("bigcode/"):
             defn_name = infill_defn_name(obj, defn_path, model, tokenizer, device)
         else:
-            defn_name = generate_defn_name(obj, defn_path, model, tokenizer, device)
+            if args.model_name.startswith("hf-internal-testing/"):
+                mask_token = "[MASK]"
+            else:
+                mask_token = "<mask>"
+            defn_name = generate_defn_name(
+                obj, defn_path, model, tokenizer, mask_token, device
+            )
 
         # Add a numerical suffix if needed
         if defn_name in new_names:
