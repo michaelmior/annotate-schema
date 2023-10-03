@@ -45,7 +45,7 @@ def compare_descriptions(obj1, obj2, scorer):
 
     paths = get_all_paths(obj1)
     for path in tqdm(list(paths)):
-        desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
+        desc_path = path.child(jsonpath_ng.Fields("description"))
 
         # Check if the original schema has a description
         orig_desc = desc_path.find(obj2)

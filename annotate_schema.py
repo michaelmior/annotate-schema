@@ -20,13 +20,21 @@ DESC_TAG = "!!!DESCRIPTION!!!"
 YARN_CMD = ["yarn", "run", "--silent", "--"]
 
 
-def get_all_paths(obj, prefix="$"):
+def get_all_paths(obj, prefix=jsonpath_ng.Root()):
     # Add descriptions to any top-level definitions
     def_keys = ["definitions", "$defs"]
     for def_key in def_keys:
         if prefix == "$" and def_key in obj:
             for k, v in obj[def_key].items():
-                yield from get_all_paths(v, prefix + "." + def_key + "." + k)
+                yield from get_all_paths(
+                    v,
+                    jsonpath_ng.Child(
+                        prefix,
+                        jsonpath_ng.Child(
+                            jsonpath_ng.Fields(def_key), jsonpath_ng.Fields(k)
+                        ),
+                    ),
+                )
 
     # TODO: We should be able to have patternProperties here, but
     #       jsonpath_ng doesn't like keys with characters such as ^ or $
@@ -36,7 +44,15 @@ def get_all_paths(obj, prefix="$"):
         for prop_key in prop_keys:
             for k, v in obj.get(prop_key, {}).items():
                 found_props = True
-                yield from get_all_paths(v, prefix + "." + prop_key + "." + k)
+                yield from get_all_paths(
+                    v,
+                    jsonpath_ng.Child(
+                        prefix,
+                        jsonpath_ng.Child(
+                            jsonpath_ng.Fields(prop_key), jsonpath_ng.Fields(k)
+                        ),
+                    ),
+                )
 
         if not found_props:
             yield prefix
@@ -45,12 +61,20 @@ def get_all_paths(obj, prefix="$"):
         yield prefix
     elif obj.get("type") == "array" and "items" in obj:
         yield prefix
-        yield from get_all_paths(obj["items"], prefix + ".items")
+        yield from get_all_paths(
+            v, jsonpath_ng.Child(prefix, jsonpath_ng.Fields("items"))
+        )
 
     for k in ("allOf", "anyOf", "oneOf"):
         if k in obj:
             for i, v in enumerate(obj[k]):
-                yield from get_all_paths(v, prefix + "." + k + "[" + str(i) + "]")
+                yield from get_all_paths(
+                    v,
+                    jsonpath_ng.Child(
+                        prefix,
+                        jsonpath_ng.Child(jsonpath_ng.Fields(k), jsonpath_ng.Index(i)),
+                    ),
+                )
 
 
 def convert_schema(obj, schema_type):
@@ -201,13 +225,13 @@ def main():
     # Strip existing descriptions if requested
     if args.strip_existing:
         for path in paths:
-            desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
+            desc_path = path.child(jsonpath_ng.Fields("description"))
             obj = desc_path.filter(lambda _: True, obj)
 
     sys.stderr.write("Generating descriptions…\n")
     descriptions = {}
     for path in tqdm(paths):
-        desc_path = jsonpath_ng.parse(path).child(jsonpath_ng.Fields("description"))
+        desc_path = path.child(jsonpath_ng.Fields("description"))
         desc = generate_description(
             obj,
             desc_path,
