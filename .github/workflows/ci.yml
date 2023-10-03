@@ -24,8 +24,8 @@ jobs:
       - name: Run tests
         run: |
           pipenv run python test.py
-          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -d -t 10 < test.json > test-desc.json
-          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -d -t 10 -s pydantic < test.json
-          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -d -t 10 -s typescript < test.json
-          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -d -t 10 -s zod < test.json
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -i test.json -o test-desc.json
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s pydantic -i test.json
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s typescript -i test.json
+          pipenv run python annotate_schema.py -m hf-internal-testing/tiny-random-GPTBigCodeForCausalLM -t 10 -s zod -i test.json
           pipenv run python eval.py -s abstractness test-desc.json test.json

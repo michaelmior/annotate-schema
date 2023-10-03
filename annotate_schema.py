@@ -125,6 +125,8 @@ def generate_description(
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input-file", type=str, default="/dev/stdin")
+    parser.add_argument("-o", "--output-file", type=str, default="/dev/stdout")
     parser.add_argument(
         "-s",
         "--schema-type",
@@ -148,8 +150,9 @@ def main():
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
 
-    json_str = sys.stdin.read()
-    obj = json.loads(json_str)
+    with open(args.input_file, "r") as f:
+        json_str = f.read()
+        obj = json.loads(json_str)
 
     assert DESC_TAG not in json_str
 
@@ -222,7 +225,8 @@ def main():
     for path, desc in descriptions.items():
         obj = jsonpath_ng.parse(path).update_or_create(obj, desc)
 
-    print(json.dumps(obj, indent=4))
+    with open(args.output_file, "w") as f:
+        json.dump(obj, f, indent=4)
 
 
 if __name__ == "__main__":
