@@ -65,7 +65,7 @@ def print_scores(header, metrics, scores):
             score_key = "nubia_score"
         else:
             score_key = "score"
-        print("  ", metric, ":", scores[metric][score_key])
+        print("  ", metric, ":", scores.get(metric, {}).get(score_key, "N/A"))
 
 
 def compare_definitions(obj1, obj2, scorer):
