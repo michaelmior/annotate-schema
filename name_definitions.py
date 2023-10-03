@@ -363,10 +363,10 @@ def main():
 
         # Add a numerical suffix if needed
         if defn_name in new_names:
-            i = 2
+            defn_suffix = 2
             while (defn_name + str(i)) in new_names:
-                i += 1
-            defn_name += str(i)
+                defn_suffix += 1
+            defn_name += str(defn_suffix)
         new_names.add(defn_name)
 
         # Store this definition name to update later
@@ -379,7 +379,7 @@ def main():
         obj = defn_path.left.update_or_create(
             copy.deepcopy(obj), rename_key(str(defn_path.right), defn_name)
         )
-        new_path = ".".join(paths[i].split(".")[:-1] + [defn_name])
+        new_path = ".".join(path.split(".")[:-1] + [defn_name])
         obj = replace_references(obj, path, new_path)
 
     # Output the mapping between old and new definitions
