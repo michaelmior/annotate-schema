@@ -29,7 +29,7 @@ def get_all_paths(obj, prefix=jsonpath_ng.Root()):
     # Add descriptions to any top-level definitions
     def_keys = ["definitions", "$defs"]
     for def_key in def_keys:
-        if prefix == "$" and def_key in obj:
+        if isinstance(prefix, jsonpath_ng.Root) and def_key in obj:
             for k, v in obj[def_key].items():
                 yield from get_all_paths(
                     v,
@@ -67,7 +67,7 @@ def get_all_paths(obj, prefix=jsonpath_ng.Root()):
     elif obj.get("type") == "array" and "items" in obj:
         yield prefix
         yield from get_all_paths(
-            v, jsonpath_ng.Child(prefix, jsonpath_ng.Fields("items"))
+            obj["items"], jsonpath_ng.Child(prefix, jsonpath_ng.Fields("items"))
         )
 
     for k in ("allOf", "anyOf", "oneOf"):
