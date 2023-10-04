@@ -167,9 +167,8 @@ def process_file(infile, outfile, model, tokenizer, device, args):
             desc_path = path.child(jsonpath_ng.Fields("description"))
             obj = desc_path.filter(lambda _: True, obj)
 
-    sys.stderr.write("Generating descriptions…\n")
     descriptions = {}
-    for path in tqdm(paths):
+    for path in tqdm(paths, leave=False):
         desc_path = path.child(jsonpath_ng.Fields("description"))
         desc = generate_description(
             obj,
@@ -263,12 +262,13 @@ def main():
         args.model, trust_remote_code=True, device_map="auto"
     )
 
+    sys.stderr.write("Generating descriptions…\n")
     if os.path.isfile(args.input):
         if os.path.isdir(args.output):
             args.output = os.path.join(args.output, os.path.basename(args.input))
         process_file(args.input, args.output, model, tokenizer, device, args)
     elif os.path.isdir(args.input):
-        for f in os.listdir(args.input):
+        for f in tqdm(os.listdir(args.input)):
             infile = os.path.join(args.input, f)
             outfile = os.path.join(args.output, f)
             process_file(infile, outfile, model, tokenizer, device, args)
