@@ -22,6 +22,10 @@ YARN_CMD = ["yarn", "run", "--silent", "--"]
 
 
 def get_all_paths(obj, prefix=jsonpath_ng.Root()):
+    # Skip anything not a dictionary
+    if not isinstance(obj, dict):
+        return
+
     # Add descriptions to any top-level definitions
     def_keys = ["definitions", "$defs"]
     for def_key in def_keys:
