@@ -3,6 +3,7 @@ import collections
 import copy
 import csv
 import json
+import os
 import random
 import re
 import sys
@@ -265,68 +266,12 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
     return utils.strip_generated_code(generated_code[len(defn_str) :])
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input-file", type=str, default="/dev/stdin")
-    parser.add_argument("-o", "--output-file", type=str, default="/dev/stdout")
-    parser.add_argument("-m", "--model-name", default="neulab/codebert-javascript")
-    parser.add_argument("-c", "--cpu", default=False, action="store_true")
-    parser.add_argument("-k", "--keep-existing", default=False, action="store_true")
-    parser.add_argument("--output-mapping", default=False, action="store_true")
-    parser.add_argument("--better-transformer", default=False, action="store_true")
-    args = parser.parse_args()
-
-    device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
-
-    with open(args.input_file, "r") as f:
+def process_file(infile, outfile, model, tokenizer, device, args):
+    with open(infile, "r") as f:
         json_str = f.read()
         obj = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(
             json_str
         )
-
-    # Load model
-    sys.stderr.write("Loading model…\n")
-
-    if args.model_name.startswith("facebook/incoder-"):
-        # Add model-specific parameters
-        kwargs = {}
-
-        if args.model_name == "facebook/incoder-6B":
-            kwargs["low_cpu_mem_usage"] = True
-            if not args.cpu:
-                kwargs["revision"] = "float16"
-                kwargs["torch_dtype"] = torch.float16
-
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model_name, trust_remote_code=True, device_map="auto", **kwargs
-        ).to(device)
-
-        # Load tokenizer
-        sys.stderr.write("Loading tokenizer…\n")
-        tokenizer = AutoTokenizer.from_pretrained(
-            args.model_name, trust_remote_code=True, device_map="auto"
-        )
-        tokenizer.pad_token = "<pad>"
-        tokenizer.padding_side = "left"
-    elif args.model_name.startswith("bigcode/"):
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model_name,
-            trust_remote_code=True,
-            device_map="auto",
-        ).to(device)
-
-        # Load tokenizer
-        sys.stderr.write("Loading tokenizer…\n")
-        tokenizer = AutoTokenizer.from_pretrained(
-            args.model_name, trust_remote_code=True, device_map="auto"
-        )
-    else:
-        model = pipeline("fill-mask", model=args.model_name, device=device)
-        tokenizer = None
-
-    # Convert to BetterTransformer
-    if args.better_transformer:
-        model = model.to_bettertransformer()
 
     paths = list(get_defn_paths(obj))
 
@@ -399,8 +344,80 @@ def main():
         for orig, final in final_mapping.items():
             writer.writerow([orig, final])
 
-    with open(args.output_file, "w") as f:
+    with open(outfile, "w") as f:
         json.dump(obj, f, indent=4)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-i", "--input", type=utils.InputOutputType(True), default="/dev/stdin"
+    )
+    parser.add_argument(
+        "-o", "--output", type=utils.InputOutputType(False), default="/dev/stdout"
+    )
+    parser.add_argument("-m", "--model-name", default="neulab/codebert-javascript")
+    parser.add_argument("-c", "--cpu", default=False, action="store_true")
+    parser.add_argument("-k", "--keep-existing", default=False, action="store_true")
+    parser.add_argument("--output-mapping", default=False, action="store_true")
+    parser.add_argument("--better-transformer", default=False, action="store_true")
+    args = parser.parse_args()
+
+    device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
+
+    # Load model
+    sys.stderr.write("Loading model…\n")
+
+    if args.model_name.startswith("facebook/incoder-"):
+        # Add model-specific parameters
+        kwargs = {}
+
+        if args.model_name == "facebook/incoder-6B":
+            kwargs["low_cpu_mem_usage"] = True
+            if not args.cpu:
+                kwargs["revision"] = "float16"
+                kwargs["torch_dtype"] = torch.float16
+
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name, trust_remote_code=True, device_map="auto", **kwargs
+        ).to(device)
+
+        # Load tokenizer
+        sys.stderr.write("Loading tokenizer…\n")
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, trust_remote_code=True, device_map="auto"
+        )
+        tokenizer.pad_token = "<pad>"
+        tokenizer.padding_side = "left"
+    elif args.model_name.startswith("bigcode/"):
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name,
+            trust_remote_code=True,
+            device_map="auto",
+        ).to(device)
+
+        # Load tokenizer
+        sys.stderr.write("Loading tokenizer…\n")
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, trust_remote_code=True, device_map="auto"
+        )
+    else:
+        model = pipeline("fill-mask", model=args.model_name, device=device)
+        tokenizer = None
+
+    # Convert to BetterTransformer
+    if args.better_transformer:
+        model = model.to_bettertransformer()
+
+    if os.path.isfile(args.input):
+        if os.path.isdir(args.output):
+            args.output = os.path.join(args.output, os.path.basename(args.input))
+        process_file(args.input, args.output, model, tokenizer, device, args)
+    elif os.path.isdir(args.input):
+        for f in os.listdir(args.input):
+            infile = os.path.join(args.input, f)
+            outfile = os.path.join(args.output, f)
+            process_file(infile, outfile, model, tokenizer, device, args)
 
 
 if __name__ == "__main__":

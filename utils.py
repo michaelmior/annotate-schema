@@ -1,3 +1,6 @@
+import argparse
+import os
+
 import torch
 from transformers import PreTrainedTokenizer, StoppingCriteria
 
@@ -46,3 +49,34 @@ def strip_generated_code(code):
 
     # Clean up and return the generated description
     return code.split('"}')[0].strip()
+
+
+# See https://stackoverflow.com/a/33181083/123695
+class InputOutputType:
+    def __init__(self, is_input=True):
+        self._is_input = is_input
+
+    def __call__(self, path):
+        if path == "-":
+            if self._is_input:
+                return "/dev/stdin"
+            else:
+                return "/dev/stdout"
+        else:
+            if self._is_input:
+                if not os.path.exists(path):
+                    raise argparse.ArgumentTypeError(
+                        "input path does not exist: '%s'" % path
+                    )
+            else:
+                parent = os.path.dirname(os.path.normpath(path)) or "."
+                if not os.path.isdir(parent):
+                    raise argparse.ArgumentTypeError(
+                        "parent path is not a directory: '%s'" % parent
+                    )
+                elif not os.path.exists(parent):
+                    raise argparse.ArgumentTypeError(
+                        "parent directory does not exist: '%s'" % parent
+                    )
+
+        return path
