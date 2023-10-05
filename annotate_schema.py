@@ -1,5 +1,6 @@
 import argparse
 import copy
+import glob
 import json
 import os
 import subprocess
@@ -218,6 +219,7 @@ def main():
     parser.add_argument("-d", "--device-map-auto", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("--better-transformer", default=False, action="store_true")
+    parser.add_argument("--skip-existing", default=False, action="store_true")
     args = parser.parse_args()
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
@@ -268,9 +270,16 @@ def main():
             args.output = os.path.join(args.output, os.path.basename(args.input))
         process_file(args.input, args.output, model, tokenizer, device, args)
     elif os.path.isdir(args.input):
-        for f in tqdm(os.listdir(args.input)):
-            infile = os.path.join(args.input, f)
-            outfile = os.path.join(args.output, f)
+        for infile in tqdm(glob.glob(os.path.join(args.input, "*.json"))):
+            # Skip any subdirectories
+            if os.path.isdir(infile):
+                continue
+
+            # Optionally skip existing files
+            outfile = os.path.join(args.output, os.path.basename(infile))
+            if args.skip_existing and os.path.isfile(outfile):
+                continue
+
             process_file(infile, outfile, model, tokenizer, device, args)
 
 
