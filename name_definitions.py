@@ -10,6 +10,7 @@ import re
 import sys
 from typing import List
 
+import json5
 import jsonpath_ng
 import torch
 from tqdm import tqdm
@@ -270,9 +271,7 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
 def process_file(infile, outfile, model, tokenizer, device, args):
     with open(infile, "r") as f:
         json_str = f.read()
-        obj = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(
-            json_str
-        )
+        obj = json5.loads(json_str)
 
     paths = list(get_defn_paths(obj))
 

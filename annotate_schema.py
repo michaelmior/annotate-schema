@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 
+import json5
 import jsonpath_ng
 import torch
 from tqdm import tqdm
@@ -163,7 +164,7 @@ def generate_description(
 def process_file(infile, outfile, model, tokenizer, device, args):
     with open(infile, "r") as f:
         json_str = f.read()
-        obj = json.loads(json_str)
+        obj = json5.loads(json_str)
 
     assert DESC_TAG not in json_str
 
