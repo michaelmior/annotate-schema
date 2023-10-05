@@ -119,7 +119,14 @@ def convert_schema(obj, schema_type):
 
 
 def generate_description(
-    schema, desc_path, schema_type, model, tokenizer, device="cpu", max_tokens=2048
+    schema,
+    desc_path,
+    schema_type,
+    model,
+    tokenizer,
+    device="cpu",
+    max_tokens=2048,
+    num_beams=3,
 ):
     # Add the description as a tag and use it to find where to remove the
     # tag so we can start description generation after the opening quote
@@ -140,7 +147,7 @@ def generate_description(
         x,
         generation_config=GenerationConfig(
             do_sample=True,
-            num_beams=3,
+            num_beams=num_beams,
             max_new_tokens=50,
             pad_token_id=tokenizer.eos_token_id,
         ),
@@ -179,6 +186,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
             tokenizer,
             device,
             args.max_tokens,
+            args.num_beams,
         )
 
         # Store this description to update later
@@ -219,6 +227,7 @@ def main():
     parser.add_argument("-d", "--device-map-auto", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("--better-transformer", default=False, action="store_true")
+    parser.add_argument("--num-beams", type=int, default=1)
     parser.add_argument("--skip-existing", default=False, action="store_true")
     args = parser.parse_args()
 
