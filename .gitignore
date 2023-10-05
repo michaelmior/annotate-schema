@@ -9,6 +9,6 @@ __pycache__/
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
-schemas/
+schemas*/
 wandb/
 *.pt
