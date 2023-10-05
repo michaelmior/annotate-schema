@@ -182,11 +182,11 @@ def process_file(infile, outfile, model, tokenizer, device, args):
         )
 
         # Store this description to update later
-        descriptions[str(desc_path)] = desc
+        descriptions[desc_path] = desc
 
     # Iterate through all the collected descriptions and update the object
     for path, desc in descriptions.items():
-        obj = jsonpath_ng.parse(path).update_or_create(obj, desc)
+        obj = path.update_or_create(obj, desc)
 
     with open(outfile, "w") as f:
         json.dump(obj, f, indent=4)
