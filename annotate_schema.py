@@ -169,7 +169,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
             obj = desc_path.filter(lambda _: True, obj)
 
     descriptions = {}
-    for path in tqdm(paths, leave=False):
+    for path in tqdm(paths, desc=os.path.basename(infile), leave=False):
         desc_path = path.child(jsonpath_ng.Fields("description"))
         desc = generate_description(
             obj,

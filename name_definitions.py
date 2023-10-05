@@ -300,11 +300,10 @@ def process_file(infile, outfile, model, tokenizer, device, args):
     else:
         orig_mapping = {path: path for path in paths}
 
-    sys.stderr.write("Generating definition names…\n")
     defn_names = {}
     new_names = set()
     final_mapping = {}
-    for path in tqdm(paths):
+    for path in tqdm(paths, desc=os.path.basename(infile), leave=False):
         defn_path = jsonpath_ng.parse(path)
 
         if args.model_name.startswith("bigcode/"):
@@ -411,6 +410,7 @@ def main():
     if args.better_transformer:
         model = model.to_bettertransformer()
 
+    sys.stderr.write("Generating definition names…\n")
     if os.path.isfile(args.input):
         if os.path.isdir(args.output):
             args.output = os.path.join(args.output, os.path.basename(args.input))
