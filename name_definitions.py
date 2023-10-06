@@ -55,13 +55,16 @@ def rename_key(old_name, new_name, reorder=False):
     return rename_fn
 
 
-def get_defn_paths(obj, prefix="$"):
+def get_defn_paths(obj, prefix=jsonpath_ng.Root()):
     # Add descriptions to any top-level definitions
     def_keys = ["definitions", "$defs"]
     for def_key in def_keys:
-        if prefix == "$" and def_key in obj:
-            for k, v in obj[def_key].items():
-                yield prefix + "." + def_key + "." + k
+        if isinstance(prefix, jsonpath_ng.Root) and def_key in obj:
+            for k in obj[def_key]:
+                yield jsonpath_ng.Child(
+                    jsonpath_ng.Child(prefix, jsonpath_ng.Fields(def_key)),
+                    jsonpath_ng.Fields(k),
+                )
 
 
 def make_sentinel(i):
@@ -192,7 +195,7 @@ def infill(
 
 
 def path_to_ref(path):
-    return re.sub("^\$", "#", path).replace(".", "/")
+    return re.sub("^\$", "#", str(path)).replace(".", "/")
 
 
 def replace_references(obj, old_path, new_path):
@@ -276,35 +279,30 @@ def process_file(infile, outfile, model, tokenizer, device, args):
     paths = list(get_defn_paths(obj))
 
     # Erase the existing definition names before continuing
-    orig_defs = {}
     if not args.keep_existing:
         orig_mapping = {}
-        for i, path in enumerate(paths):
-            defn_path = jsonpath_ng.parse(path)
-
+        for i, defn_path in enumerate(paths):
             # Rename the definition in the object
             new_name = "defn" + str(i)
-            orig_defs[paths[i]] = defn_path.find(obj)[0].value
             obj = defn_path.left.update_or_create(
                 obj, rename_key(str(defn_path.right), new_name)
             )
 
             # Replace the old path with the new path
-            old_path = paths[i]
-            paths[i] = ".".join(paths[i].split(".")[:-1] + [new_name])
-            obj = replace_references(obj, old_path, paths[i])
+            paths[i] = jsonpath_ng.Child(defn_path.left, jsonpath_ng.Fields(new_name))
+            obj = replace_references(obj, defn_path, paths[i])
 
             # Keep a mapping so we know the original definition name
-            orig_mapping[paths[i]] = old_path
+            orig_mapping[paths[i]] = defn_path
     else:
-        orig_mapping = {path: path for path in paths}
+        orig_mapping = {
+            jsonpath_ng.parse(path): jsonpath_ng.parse(path) for path in paths
+        }
 
     defn_names = {}
     new_names = set()
     final_mapping = {}
-    for path in tqdm(paths, desc=os.path.basename(infile), leave=False):
-        defn_path = jsonpath_ng.parse(path)
-
+    for defn_path in tqdm(paths, desc=os.path.basename(infile), leave=False):
         if args.model_name.startswith("bigcode/"):
             defn_name = infill_defn_name(obj, defn_path, model, tokenizer, device)
         else:
@@ -325,17 +323,18 @@ def process_file(infile, outfile, model, tokenizer, device, args):
         new_names.add(defn_name)
 
         # Store this definition name to update later
-        defn_names[path] = defn_name
-        final_mapping[orig_mapping[path]] = ".".join(path.split(".")[:-1] + [defn_name])
+        defn_names[defn_path] = defn_name
+        final_mapping[orig_mapping[defn_path]] = jsonpath_ng.Child(
+            defn_path.left, jsonpath_ng.Fields(defn_name)
+        )
 
     # Iterate through all the collected descriptions and update the object
-    for path, defn_name in defn_names.items():
-        defn_path = jsonpath_ng.parse(path)
+    for defn_path, defn_name in defn_names.items():
         obj = defn_path.left.update_or_create(
             copy.deepcopy(obj), rename_key(str(defn_path.right), defn_name)
         )
-        new_path = ".".join(path.split(".")[:-1] + [defn_name])
-        obj = replace_references(obj, path, new_path)
+        new_path = jsonpath_ng.Child(defn_path.left, jsonpath_ng.Fields(defn_name))
+        obj = replace_references(obj, defn_path, new_path)
 
     # Output the mapping between old and new definitions
     if args.output_mapping:
