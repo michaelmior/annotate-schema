@@ -319,7 +319,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
         # Add a numerical suffix if needed
         if defn_name in new_names:
             defn_suffix = 2
-            while (defn_name + str(i)) in new_names:
+            while (defn_name + str(defn_suffix)) in new_names:
                 defn_suffix += 1
             defn_name += str(defn_suffix)
         new_names.add(defn_name)
