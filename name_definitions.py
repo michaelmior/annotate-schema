@@ -295,9 +295,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
             # Keep a mapping so we know the original definition name
             orig_mapping[paths[i]] = defn_path
     else:
-        orig_mapping = {
-            jsonpath_ng.parse(path): jsonpath_ng.parse(path) for path in paths
-        }
+        orig_mapping = {path: path for path in paths}
 
     defn_names = {}
     new_names = set()
