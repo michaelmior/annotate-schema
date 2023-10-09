@@ -9,6 +9,7 @@ import random
 import re
 import sys
 from typing import List
+import uuid
 
 import json5
 import jsonpath_ng
@@ -279,17 +280,19 @@ def process_file(infile, outfile, model, tokenizer, device, args):
     paths = list(get_defn_paths(obj))
 
     # Erase the existing definition names before continuing
+    temp_names = set()
     if not args.keep_existing:
         orig_mapping = {}
         for i, defn_path in enumerate(paths):
             # Rename the definition in the object
-            new_name = "defn" + str(i)
+            temp_name = uuid.uuid4().hex
+            temp_names.add(temp_name)
             obj = defn_path.left.update_or_create(
-                obj, rename_key(str(defn_path.right), new_name)
+                obj, rename_key(str(defn_path.right), temp_name)
             )
 
             # Replace the old path with the new path
-            paths[i] = jsonpath_ng.Child(defn_path.left, jsonpath_ng.Fields(new_name))
+            paths[i] = jsonpath_ng.Child(defn_path.left, jsonpath_ng.Fields(temp_name))
             obj = replace_references(obj, defn_path, paths[i])
 
             # Keep a mapping so we know the original definition name
@@ -311,6 +314,10 @@ def process_file(infile, outfile, model, tokenizer, device, args):
             defn_name = generate_defn_name(
                 obj, defn_path, model, tokenizer, mask_token, device
             )
+
+        # If we somehow generated one of the random UUIDs, don't use it
+        if defn_name in temp_names:
+            defn_name = "defn"
 
         # Add a numerical suffix if needed
         if defn_name in new_names:
