@@ -429,7 +429,10 @@ def main():
             if args.skip_existing and os.path.isfile(outfile):
                 continue
 
-            process_file(infile, outfile, model, tokenizer, device, args)
+            try:
+                process_file(infile, outfile, model, tokenizer, device, args)
+            except Exception as e:
+                sys.stderr.write(f"\nError processing {infile}: {e}\n")
 
 
 if __name__ == "__main__":
