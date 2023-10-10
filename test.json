@@ -17,5 +17,11 @@
       "type": "string",
       "description": "Test"
     }
-  }
+  },
+  "patternProperties": {
+    "^bar.*": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
 }

@@ -43,13 +43,16 @@ def get_all_paths(obj, prefix=jsonpath_ng.Root()):
                     ),
                 )
 
-    # TODO: We should be able to have patternProperties here, but
-    #       jsonpath_ng doesn't like keys with characters such as ^ or $
-    prop_keys = ["properties"]
+    prop_keys = ["properties", "patternProperties", "additionalProperties"]
     if obj.get("type") == "object":
         found_props = False
         for prop_key in prop_keys:
-            for k, v in obj.get(prop_key, {}).items():
+            prop_obj = obj.get(prop_key, {})
+            # additionalProperties can be a Boolean, so we check
+            if not isinstance(prop_obj, dict):
+                continue
+
+            for k, v in prop_obj.items():
                 found_props = True
                 yield from get_all_paths(
                     v,
