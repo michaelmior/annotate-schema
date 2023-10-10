@@ -176,7 +176,9 @@ def process_file(infile, outfile, model, tokenizer, device, args):
     # Strip existing descriptions if requested
     if args.strip_existing:
         for path in paths:
-            desc_path = path.child(jsonpath_ng.Fields("description"))
+            desc_path = path.child(
+                jsonpath_ng.Fields("title", "description", "$comment")
+            )
             obj = desc_path.filter(lambda _: True, obj)
 
     descriptions = {}
