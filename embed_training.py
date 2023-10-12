@@ -198,7 +198,7 @@ class FileDataset(torch.utils.data.Dataset):
         self.filename = filename
 
         # Count the number of lines in the file
-        with open(filename) as f:
+        with open(filename, encoding="utf-8") as f:
             self.max_lines = 0
             for line in f:
                 self.max_lines += 1

@@ -99,8 +99,8 @@ if __name__ == "__main__":
     scorer = nlgmetricverse.NLGMetricverse(metrics=scorers)
 
     # Load both objects
-    obj1 = json.load(open(args.candidate))
-    obj2 = json.load(open(args.reference))
+    obj1 = json.load(open(args.candidate, encoding="utf-8"))
+    obj2 = json.load(open(args.reference, encoding="utf-8"))
 
     # Print similarity
     if args.descriptions:
