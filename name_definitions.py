@@ -273,7 +273,7 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
 
 
 def process_file(infile, outfile, model, tokenizer, device, args):
-    with open(infile, "r") as f:
+    with open(infile, "r", encoding="utf-8") as f:
         json_str = f.read()
         obj = json5.loads(json_str)
 
@@ -347,7 +347,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
         for orig, final in final_mapping.items():
             writer.writerow([orig, final])
 
-    with open(outfile, "w") as f:
+    with open(outfile, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=4)
 
 

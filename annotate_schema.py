@@ -165,7 +165,7 @@ def generate_description(
 
 
 def process_file(infile, outfile, model, tokenizer, device, args):
-    with open(infile, "r") as f:
+    with open(infile, "r", encoding="utf-8") as f:
         json_str = f.read()
         obj = json5.loads(json_str)
 
@@ -202,7 +202,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
     for path, desc in descriptions.items():
         obj = path.update_or_create(obj, desc)
 
-    with open(outfile, "w") as f:
+    with open(outfile, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=4)
 
 
