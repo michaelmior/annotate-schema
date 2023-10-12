@@ -53,6 +53,7 @@ A few examples are given below.
 - `facebook/incoder-1B`
 - `facebook/incoder-6B`
 - `replit/replit-code-v1-3b`
+- `replit/replit-code-v1_5-3b`
 - `Salesforce/codegen-350M-mono`
 - `Salesforce/codegen-350M-multi`
 - `Salesforce/codegen-6B-mono`

@@ -221,7 +221,7 @@ def main():
         default="jsonschema",
         choices=["jsonschema", "pydantic", "typescript", "zod"],
     )
-    parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1-3b")
+    parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1_5-3b")
     parser.add_argument(
         "-b", "--model-basename", dest="basename", type=str, default=None
     )
