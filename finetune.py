@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import random
 
 import peft
 import torch
@@ -15,23 +16,38 @@ from transformers import (
 MAX_LENGTH = 512
 
 
-class JsonDirectoryDataset(torch.utils.data.Dataset):
+class JsonDirectoryDataset(torch.utils.data.IterableDataset):
     def __init__(self, dirname, tokenizer):
+        # Get the list of files in random order
         self.files = glob.glob(os.path.join(dirname, "*.json"))
+        random.shuffle(self.files)
+
         self.tokenizer = tokenizer
+        self.items = None
 
     def __len__(self):
-        return len(self.files)
+        # If we have already gone through once, use the calculated length
+        if self.items is not None:
+            return self.items
+        else:
+            return super().__len__()
 
-    def __getitem__(self, index):
-        data = open(self.files[index], "r", encoding="utf-8").read()
-        return self.tokenizer(
-            data,
-            max_length=MAX_LENGTH,
-            padding="max_length",
-            truncation=True,
-            return_tensors="pt",
-        )
+    def __iter__(self):
+        items = 0
+        for file in self.files:
+            data = open(file, "r", encoding="utf-8").read()
+            for start_idx in range(0, len(data), MAX_LENGTH):
+                items += 1
+                yield self.tokenizer(
+                    data[start_idx : start_idx + MAX_LENGTH],
+                    max_length=MAX_LENGTH,
+                    padding="max_length",
+                    truncation=True,
+                    return_tensors="pt",
+                )
+
+        # Remember the number of items
+        self.items = items
 
 
 def main():
@@ -74,7 +90,6 @@ def main():
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=args.batch_size,
-        shuffle=True,
         pin_memory=True,
         collate_fn=data_collator,
     )
