@@ -62,6 +62,7 @@ def main():
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("-a", "--accum-iter", default=1, type=int)
     parser.add_argument("-t", "--target_modules", default="")
+    parser.add_argument("--checkpoint-every", default=None, type=int)
     args = parser.parse_args()
 
     if args.load_in_4bit and args.load_in_8bit:
@@ -145,6 +146,11 @@ def main():
         if not stepped:
             optimizer.zero_grad()
             optimizer.step()
+
+        if args.checkpoint_every and (epoch + 1) % args.checkpoint_every == 0:
+            model.save_pretrained(
+                os.path.normpath(args.output) + "-checkpoint-" + str(epoch)
+            )
 
     # Save the final model
     model.save_pretrained(args.output)
