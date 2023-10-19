@@ -76,7 +76,10 @@ def main():
         return_special_tokens_mask=True,
     )
     tokenizer.model_max_length = 2048
-    tokenizer.pad_token = tokenizer.eos_token
+    if args.model.startswith("facebook/incoder-"):
+        tokenizer.pad_token = "<pad>"
+    else:
+        tokenizer.pad_token = tokenizer.eos_token
 
     config = AutoConfig.from_pretrained(args.model, trust_remote_code=True)
 
