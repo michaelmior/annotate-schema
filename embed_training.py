@@ -279,7 +279,7 @@ class EarlyStopper:
 def calc_val_stats(model, val_data, batch_size, loss_fn, accuracy_fn):
     model.eval()
 
-    # Load validation data in a single batch
+    # Load validation data
     val_dataloader = torch.utils.data.DataLoader(val_data, batch_size=batch_size)
 
     loss = 0
