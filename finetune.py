@@ -61,6 +61,7 @@ def main():
     parser.add_argument("-4", "--load-in-4bit", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("-a", "--accum-iter", default=1, type=int)
+    parser.add_argument("-t", "--target_modules", default="")
     args = parser.parse_args()
 
     if args.load_in_4bit and args.load_in_8bit:
@@ -102,7 +103,10 @@ def main():
     if not args.load_in_4bit and not args.load_in_8bit:
         model = model.to(device)
 
-    model = peft.get_peft_model(model, peft.LoraConfig())
+    peft_kwargs = {}
+    if args.target_modules:
+        peft_kwargs["target_modules"] = args.target_modules.split(",")
+    model = peft.get_peft_model(model, peft.LoraConfig(**peft_kwargs))
 
     # Construct a collated dataset loader
     dataset = JsonDirectoryDataset(args.input, tokenizer)
@@ -121,7 +125,11 @@ def main():
 
         stepped = False
         for batch_num, X_batch in enumerate(pbar):
-            X_batch = {k: v.squeeze(1).to(device) for k, v in X_batch.items()}
+            X_batch = {
+                k: v.squeeze(1).to(device)
+                for k, v in X_batch.items()
+                if k != "token_type_ids"
+            }
             outputs = model(**X_batch)
 
             # Calculate the loss and backprop
