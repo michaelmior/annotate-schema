@@ -58,7 +58,12 @@ def main():
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
     parser.add_argument("-n", "--num-epochs", default=100, type=int)
     parser.add_argument("-b", "--batch-size", default=8, type=int)
+    parser.add_argument("-4", "--load-in-4bit", default=False, action="store_true")
+    parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     args = parser.parse_args()
+
+    if args.load_in_4bit and args.load_in_8bit:
+        parser.error("Only one of --load-in-4bit or --load-in-8bit can be used")
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
 
@@ -78,10 +83,21 @@ def main():
     if hasattr(config, "attn_config"):
         config.attn_config["attn_impl"] = "triton"
 
+    kwargs = {}
+    if args.load_in_4bit:
+        kwargs["load_in_4bit"] = True
+    if args.load_in_8bit:
+        kwargs["load_in_8bit"] = True
+
     # Load the model and convert to PEFT using LoRA
     model = AutoModelForCausalLM.from_pretrained(
-        args.model, config=config, trust_remote_code=True
-    ).to(device)
+        args.model, config=config, trust_remote_code=True, **kwargs
+    )
+
+    # If not using a quantized model, set to the correct device
+    if not args.load_in_4bit and not args.load_in_8bit:
+        model = model.to(device)
+
     model = peft.get_peft_model(model, peft.LoraConfig())
 
     # Construct a collated dataset loader
