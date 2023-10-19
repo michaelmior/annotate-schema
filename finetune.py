@@ -60,6 +60,7 @@ def main():
     parser.add_argument("-b", "--batch-size", default=8, type=int)
     parser.add_argument("-4", "--load-in-4bit", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
+    parser.add_argument("-a", "--accum-iter", default=1, type=int)
     args = parser.parse_args()
 
     if args.load_in_4bit and args.load_in_8bit:
@@ -114,16 +115,24 @@ def main():
     for epoch in tqdm.tqdm(range(args.num_epochs), desc="Epoch", position=0):
         pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
         model.train()
-        total_loss = 0
+
+        stepped = False
         for batch_num, X_batch in enumerate(pbar):
             X_batch = {k: v.squeeze(1).to(device) for k, v in X_batch.items()}
             outputs = model(**X_batch)
 
             # Calculate the loss and backprop
-            loss = outputs.loss
-            total_loss += loss.detach().float()
-            optimizer.zero_grad()
+            loss = outputs.loss / args.accum_iter
             loss.backward()
+
+            if batch_num % args.accum_iter == 0:
+                optimizer.zero_grad()
+                optimizer.step()
+                stepped = True
+
+        # Make sure to step the optimizer
+        if not stepped:
+            optimizer.zero_grad()
             optimizer.step()
 
     # Save the final model
