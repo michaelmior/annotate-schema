@@ -3,12 +3,14 @@ import glob
 import os
 import random
 
+import bitsandbytes
 import peft
 import torch
 import tqdm
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
+    BitsAndBytesConfig,
     AutoTokenizer,
     DataCollatorForLanguageModeling,
 )
@@ -89,11 +91,18 @@ def main():
     parser.add_argument("-b", "--batch-size", default=8, type=int)
     parser.add_argument("-4", "--load-in-4bit", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
+    parser.add_argument("-p", "--paged", default=False, action="store_true")
+    parser.add_argument("-q", "--qlora", default=False, action="store_true")
     parser.add_argument("-a", "--accum-iter", default=1, type=int)
     parser.add_argument("-t", "--target_modules", default="")
     parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--checkpoint-every", default=None, type=int)
     args = parser.parse_args()
+
+    # Enable settings to be used with QLora
+    if args.qlora:
+        args.load_in_4bit = True
+        args.paged = True
 
     if args.load_in_4bit and args.load_in_8bit:
         parser.error("Only one of --load-in-4bit or --load-in-8bit can be used")
@@ -119,15 +128,24 @@ def main():
     if hasattr(config, "attn_config"):
         config.attn_config["attn_impl"] = "triton"
 
-    kwargs = {}
+    # Construct the quantization configuration
+    qkwargs = {}
     if args.load_in_4bit:
-        kwargs["load_in_4bit"] = True
+        qkwargs["load_in_4bit"] = True
     if args.load_in_8bit:
-        kwargs["load_in_8bit"] = True
+        qkwargs["load_in_8bit"] = True
+    if args.qlora:
+        qkwargs["bnb_4bit_use_double_quant"] = True
+        qkwargs["bnb_4bit_quant_type"] = "nf4"
+        qkwargs["bnb_4bit_compute_dtype"] = torch.float16
+    qconfig = BitsAndBytesConfig(**qkwargs)
 
     # Load the model and convert to PEFT using LoRA
     model = AutoModelForCausalLM.from_pretrained(
-        args.model, config=config, trust_remote_code=True, **kwargs
+        args.model,
+        config=config,
+        trust_remote_code=True,
+        quantization_config=qconfig,
     )
 
     # If not using a quantized model, set to the correct device
@@ -155,7 +173,11 @@ def main():
     else:
         test_data = None
 
-    optimizer = torch.optim.AdamW(model.parameters())
+    if args.paged:
+        optimizer = torch.optim.AdamW(model.parameters())
+    else:
+        optimizer = bitsandbytes.optim.PagedAdamW(model.parameters())
+
     pbar = tqdm.tqdm(range(args.skip_epochs, args.num_epochs), desc="Epoch", position=0)
     for epoch in pbar:
         pbar2 = tqdm.tqdm(train_data, desc="Batch", position=1, leave=False)
