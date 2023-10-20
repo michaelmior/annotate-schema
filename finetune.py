@@ -50,9 +50,37 @@ class JsonDirectoryDataset(torch.utils.data.IterableDataset):
         self.items = items
 
 
+def get_loader(path, tokenizer, batch_size, collator):
+    dataset = JsonDirectoryDataset(path, tokenizer)
+    return torch.utils.data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        pin_memory=True,
+        collate_fn=collator,
+    )
+
+
+def calc_val_loss(model, test_data, device):
+    with torch.no_grad():
+        model.eval()
+        val_loss = 0.0
+        for batch_num, X_batch in enumerate(test_data):
+            X_batch = {
+                k: v.squeeze(1).to(device)
+                for k, v in X_batch.items()
+                if k != "token_type_ids"
+            }
+            outputs = model(**X_batch)
+            val_loss += outputs.loss.item()
+
+        val_loss /= batch_num + 1
+        return val_loss
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input")
+    parser.add_argument("train_data")
+    parser.add_argument("test_data", nargs="?")
     parser.add_argument("-o", "--output", type=str, default="peft.bin")
     parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1_5-3b")
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
@@ -109,23 +137,26 @@ def main():
         peft_kwargs["target_modules"] = args.target_modules.split(",")
     model = peft.get_peft_model(model, peft.LoraConfig(**peft_kwargs))
 
-    # Construct a collated dataset loader
-    dataset = JsonDirectoryDataset(args.input, tokenizer)
+    # Construct a collator
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
-    dataloader = torch.utils.data.DataLoader(
-        dataset,
-        batch_size=args.batch_size,
-        pin_memory=True,
-        collate_fn=data_collator,
-    )
+
+    # Build train and test data loaders
+    train_data = get_loader(args.train_data, tokenizer, args.batch_size, data_collator)
+    if args.test_data:
+        test_data = get_loader(
+            args.test_data, tokenizer, args.batch_size, data_collator
+        )
+    else:
+        test_data = None
 
     optimizer = torch.optim.AdamW(model.parameters())
-    for epoch in tqdm.tqdm(range(args.num_epochs), desc="Epoch", position=0):
-        pbar = tqdm.tqdm(dataloader, desc="Batch", position=1, leave=False)
+    pbar = tqdm.tqdm(range(args.num_epochs), desc="Epoch", position=0)
+    for epoch in pbar:
+        pbar2 = tqdm.tqdm(train_data, desc="Batch", position=1, leave=False)
         model.train()
 
         stepped = False
-        for batch_num, X_batch in enumerate(pbar):
+        for batch_num, X_batch in enumerate(pbar2):
             X_batch = {
                 k: v.squeeze(1).to(device)
                 for k, v in X_batch.items()
@@ -151,6 +182,10 @@ def main():
             model.save_pretrained(
                 os.path.normpath(args.output) + "-checkpoint-" + str(epoch)
             )
+
+        if test_data is not None:
+            val_loss = calc_val_loss(model, test_data, device)
+            pbar.set_postfix(loss=val_loss)
 
     # Save the final model
     model.save_pretrained(args.output)
