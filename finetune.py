@@ -85,11 +85,13 @@ def main():
     parser.add_argument("-m", "--model", type=str, default="replit/replit-code-v1_5-3b")
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
     parser.add_argument("-n", "--num-epochs", default=100, type=int)
+    parser.add_argument("--skip-epochs", default=0, type=int)
     parser.add_argument("-b", "--batch-size", default=8, type=int)
     parser.add_argument("-4", "--load-in-4bit", default=False, action="store_true")
     parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("-a", "--accum-iter", default=1, type=int)
     parser.add_argument("-t", "--target_modules", default="")
+    parser.add_argument("--checkpoint", default=None)
     parser.add_argument("--checkpoint-every", default=None, type=int)
     args = parser.parse_args()
 
@@ -135,7 +137,11 @@ def main():
     peft_kwargs = {}
     if args.target_modules:
         peft_kwargs["target_modules"] = args.target_modules.split(",")
-    model = peft.get_peft_model(model, peft.LoraConfig(**peft_kwargs))
+    if args.checkpoint:
+        model = peft.PeftModel.from_pretrained(model, model_id=args.checkpoint)
+    else:
+        model.enable_input_require_grads()
+        model = peft.get_peft_model(model, peft.LoraConfig(**peft_kwargs))
 
     # Construct a collator
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
@@ -150,7 +156,7 @@ def main():
         test_data = None
 
     optimizer = torch.optim.AdamW(model.parameters())
-    pbar = tqdm.tqdm(range(args.num_epochs), desc="Epoch", position=0)
+    pbar = tqdm.tqdm(range(args.skip_epochs, args.num_epochs), desc="Epoch", position=0)
     for epoch in pbar:
         pbar2 = tqdm.tqdm(train_data, desc="Batch", position=1, leave=False)
         model.train()
