@@ -8,11 +8,13 @@ import sys
 
 import json5
 import jsonpath_ng
+import peft
 import torch
 from tqdm import tqdm
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    BitsAndBytesConfig,
     GenerationConfig,
 )
 from auto_gptq import AutoGPTQForCausalLM
@@ -231,19 +233,43 @@ def main():
     )
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
     parser.add_argument("-d", "--device-map-auto", default=False, action="store_true")
-    parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("--better-transformer", default=False, action="store_true")
     parser.add_argument("--num-beams", type=int, default=1)
     parser.add_argument("--skip-existing", default=False, action="store_true")
+    parser.add_argument("-4", "--load-in-4bit", default=False, action="store_true")
+    parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
+    parser.add_argument("-p", "--paged", default=False, action="store_true")
+    parser.add_argument("-q", "--qlora", default=False, action="store_true")
+    parser.add_argument("--checkpoint", default=None)
     args = parser.parse_args()
+
+    # Enable settings to be used with QLora
+    if args.qlora:
+        args.load_in_4bit = True
+        args.paged = True
+
+    if args.load_in_4bit and args.load_in_8bit:
+        parser.error("Only one of --load-in-4bit or --load-in-8bit can be used")
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
 
     # Load model
     sys.stderr.write("Loading model…\n")
 
+    # Construct the quantization configuration
+    qkwargs = {}
+    if args.load_in_4bit:
+        qkwargs["load_in_4bit"] = True
+    if args.load_in_8bit:
+        qkwargs["load_in_8bit"] = True
+    if args.qlora:
+        qkwargs["bnb_4bit_use_double_quant"] = True
+        qkwargs["bnb_4bit_quant_type"] = "nf4"
+        qkwargs["bnb_4bit_compute_dtype"] = torch.float16
+    qconfig = BitsAndBytesConfig(**qkwargs)
+
     # Add model-specific parameters
-    kwargs = {}
+    kwargs = {"quantization_config": qconfig}
     if args.model.startswith("facebook/incoder-"):
         kwargs["low_cpu_mem_usage"] = True
         if not args.cpu and torch.cuda.is_available():
@@ -252,8 +278,6 @@ def main():
 
     if args.device_map_auto:
         kwargs["device_map"] = "auto"
-    if args.load_in_8bit:
-        kwargs["load_in_8bit"] = True
 
     if args.model.endswith("GPTQ"):
         model = AutoGPTQForCausalLM.from_quantized(
@@ -263,15 +287,22 @@ def main():
             trust_remote_code=True,
             use_triton=False,
             quantize_config=None,
-        ).to(device)
+        )
     else:
         model = AutoModelForCausalLM.from_pretrained(
             args.model, trust_remote_code=True, **kwargs
-        ).to(device)
+        )
+
+    # If not using a quantized model, set to the correct device
+    if not args.load_in_4bit and not args.load_in_8bit:
+        model = model.to(device)
 
     # Convert to BetterTransformer
     if args.better_transformer:
         model = model.to_bettertransformer()
+
+    if args.checkpoint:
+        model = peft.PeftModel.from_pretrained(model, model_id=args.checkpoint)
 
     # load tokenizer
     sys.stderr.write("Loading tokenizer…\n")
