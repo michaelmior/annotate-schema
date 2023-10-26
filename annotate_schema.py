@@ -251,6 +251,15 @@ def main():
     if args.load_in_4bit and args.load_in_8bit:
         parser.error("Only one of --load-in-4bit or --load-in-8bit can be used")
 
+    if os.path.isdir(args.input):
+        if os.path.exists(args.output):
+            if not os.path.isdir(args.output):
+                parser.error(
+                    f"Output {args.output} already exists and is not a directory"
+                )
+        else:
+            os.makedirs(args.output)
+
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
 
     # Load model
