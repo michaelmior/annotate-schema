@@ -112,8 +112,8 @@ def main():
     # Construct a tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
         args.model,
-        truncation_side="right",
-        paddingside="left",
+        truncation_side="left",
+        padding_side="right",
         return_special_tokens_mask=True,
     )
     tokenizer.model_max_length = 2048
