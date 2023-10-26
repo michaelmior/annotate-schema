@@ -1,5 +1,6 @@
 import argparse
 import glob
+import importlib
 import os
 import random
 
@@ -125,7 +126,10 @@ def main():
     config = AutoConfig.from_pretrained(args.model, trust_remote_code=True)
 
     # Use the Triton attention implementation if available
-    if hasattr(config, "attn_config"):
+    if (
+        hasattr(config, "attn_config")
+        and importlib.util.find_spec("triton_pre_mlir") is not None
+    ):
         config.attn_config["attn_impl"] = "triton"
 
     # Construct the quantization configuration
