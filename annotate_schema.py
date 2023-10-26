@@ -278,12 +278,15 @@ def main():
     qconfig = BitsAndBytesConfig(**qkwargs)
 
     # Add model-specific parameters
-    kwargs = {"quantization_config": qconfig}
+    kwargs = {}
     if args.model.startswith("facebook/incoder-"):
         kwargs["low_cpu_mem_usage"] = True
         if not args.cpu and torch.cuda.is_available():
             kwargs["revision"] = "float16"
             kwargs["torch_dtype"] = torch.float16
+
+    if args.load_in_4bit or args.load_in_8bit:
+        kwargs["quantization_config"] = qconfig
 
     if args.device_map_auto:
         kwargs["device_map"] = "auto"
