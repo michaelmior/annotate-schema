@@ -1,6 +1,8 @@
 import argparse
 import copy
 import json
+import math
+import os
 import re
 import string
 
@@ -44,7 +46,7 @@ def compare_descriptions(obj1, obj2, scorer):
     refs = []
 
     paths = get_all_paths(obj1)
-    for path in tqdm(list(paths)):
+    for path in tqdm(list(paths), position=1, leave=False):
         desc_path = path.child(jsonpath_ng.Fields("description"))
 
         # Check if the original schema has a description
@@ -58,14 +60,19 @@ def compare_descriptions(obj1, obj2, scorer):
     return scorer(predictions=cands, references=refs)
 
 
-def print_scores(header, metrics, scores):
+def print_scores(header, metrics, scores, key):
     print(header)
     for metric in metrics:
         if metric == "nubia":
             score_key = "nubia_score"
         else:
             score_key = "score"
-        print("  ", metric, ":", scores.get(metric, {}).get(score_key, "N/A"))
+        score_values = [
+            s[key].get(metric, {}).get(score_key, float("nan")) for s in scores
+        ]
+        filtered_scores = [s for s in score_values if not math.isnan(s)]
+        score = sum(filtered_scores) / len(filtered_scores)
+        print("  ", metric, ":", score)
 
 
 def compare_definitions(obj1, obj2, scorer):
@@ -85,13 +92,14 @@ def compare_files(cand, ref, scorer, args):
     obj1 = json.load(open(cand, encoding="utf-8"))
     obj2 = json.load(open(ref, encoding="utf-8"))
 
-    # Print similarity
+    # Calculat scores
+    scores = {}
     if args.descriptions:
-        scores = compare_descriptions(obj1, obj2, scorer)
-        print_scores("Descriptions", args.scorers, scores)
+        scores["desc"] = compare_descriptions(obj1, obj2, scorer)
     if args.definitions:
-        scores = compare_definitions(obj1, obj2, scorer)
-        print_scores("Definitions", args.scorers, scores)
+        scores["defs"] = compare_definitions(obj1, obj2, scorer)
+
+    return scores
 
 
 if __name__ == "__main__":
@@ -113,4 +121,20 @@ if __name__ == "__main__":
     scorer = nlgmetricverse.NLGMetricverse(metrics=scorers)
 
     # Compare the two files
-    compare_files(args.candidate, args.reference, scorer, args)
+    if os.path.isfile(args.candidate):
+        scores = [compare_files(args.candidate, args.reference, scorer, args)]
+    elif os.path.isdir(args.candidate):
+        scores = [
+            compare_files(
+                os.path.join(args.candidate, f),
+                os.path.join(args.reference, f),
+                scorer,
+                args,
+            )
+            for f in tqdm(os.listdir(args.candidate), position=0)
+        ]
+
+    if args.descriptions:
+        print_scores("Descriptions", args.scorers, scores, "desc")
+    if args.definitions:
+        print_scores("Definitions", args.scorers, scores, "defs")
