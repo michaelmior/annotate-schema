@@ -80,6 +80,20 @@ def compare_definitions(obj1, obj2, scorer):
     return scorer(predictions=cands, references=refs)
 
 
+def compare_files(cand, ref, scorer, args):
+    # Load both objects
+    obj1 = json.load(open(cand, encoding="utf-8"))
+    obj2 = json.load(open(ref, encoding="utf-8"))
+
+    # Print similarity
+    if args.descriptions:
+        scores = compare_descriptions(obj1, obj2, scorer)
+        print_scores("Descriptions", args.scorers, scores)
+    if args.definitions:
+        scores = compare_definitions(obj1, obj2, scorer)
+        print_scores("Definitions", args.scorers, scores)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("candidate")
@@ -98,14 +112,5 @@ if __name__ == "__main__":
     scorers = copy.deepcopy(args.scorers)
     scorer = nlgmetricverse.NLGMetricverse(metrics=scorers)
 
-    # Load both objects
-    obj1 = json.load(open(args.candidate, encoding="utf-8"))
-    obj2 = json.load(open(args.reference, encoding="utf-8"))
-
-    # Print similarity
-    if args.descriptions:
-        scores = compare_descriptions(obj1, obj2, scorer)
-        print_scores("Descriptions", args.scorers, scores)
-    if args.definitions:
-        scores = compare_definitions(obj1, obj2, scorer)
-        print_scores("Definitions", args.scorers, scores)
+    # Compare the two files
+    compare_files(args.candidate, args.reference, scorer, args)
