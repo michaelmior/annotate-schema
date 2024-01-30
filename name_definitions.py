@@ -56,14 +56,14 @@ def rename_key(old_name, new_name, reorder=False):
     return rename_fn
 
 
-def get_defn_paths(obj, prefix=jsonpath_ng.Root()):
+def get_defn_paths(obj):
     # Add descriptions to any top-level definitions
     def_keys = ["definitions", "$defs"]
     for def_key in def_keys:
-        if isinstance(prefix, jsonpath_ng.Root) and def_key in obj:
+        if def_key in obj:
             for k in obj[def_key]:
                 yield jsonpath_ng.Child(
-                    jsonpath_ng.Child(prefix, jsonpath_ng.Fields(def_key)),
+                    jsonpath_ng.Child(jsonpath_ng.Root(), jsonpath_ng.Fields(def_key)),
                     jsonpath_ng.Fields(k),
                 )
 
