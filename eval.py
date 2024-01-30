@@ -41,6 +41,29 @@ def split_token(token):
         return wordninja.split(token)
 
 
+def unigram_precision_recall(cand, ref):
+    cand_tokens = split_token(cand)
+    ref_tokens = split_token(ref)
+    intersection = set(cand_tokens).intersection(set(ref_tokens))
+    precision = len(intersection) / len(cand_tokens)
+    recall = len(intersection) / len(ref_tokens)
+
+    return precision, recall
+
+
+def unigram_precision_recall_scorer(predictions, references):
+    precision, recall = 0, 0
+    for c, r in zip(predictions, references):
+        p, r = unigram_precision_recall(c, r)
+        precision += p
+        recall += r
+
+    return {
+        "unigram_precision": {"score": precision / len(predictions)},
+        "unigram_recall": {"score": recall / len(predictions)},
+    }
+
+
 def compare_descriptions(obj1, obj2, scorer):
     cands = []
     refs = []
@@ -114,7 +137,6 @@ if __name__ == "__main__":
         "-s",
         "--scorers",
         type=lambda t: [s.strip() for s in t.split(",")],
-        required=True,
     )
     parser.add_argument("-d", "--descriptions", default=False, action="store_true")
     parser.add_argument("-n", "--definitions", default=False, action="store_true")
@@ -122,7 +144,11 @@ if __name__ == "__main__":
 
     # Select the desired metrics
     scorers = copy.deepcopy(args.scorers)
-    scorer = nlgmetricverse.NLGMetricverse(metrics=scorers)
+    if scorers is None:
+        scorers = ["unigram_precision", "unigram_recall"]
+        scorer = unigram_precision_recall_scorer
+    else:
+        scorer = nlgmetricverse.NLGMetricverse(metrics=scorers)
 
     # Compare the two files
     if os.path.isfile(args.candidate):
@@ -139,6 +165,6 @@ if __name__ == "__main__":
         ]
 
     if args.descriptions:
-        print_scores("Descriptions", args.scorers, scores, "desc")
+        print_scores("Descriptions", scorers, scores, "desc")
     if args.definitions:
-        print_scores("Definitions", args.scorers, scores, "defs")
+        print_scores("Definitions", scorers, scores, "defs")
