@@ -271,12 +271,16 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
     return utils.strip_generated_code(generated_code[len(defn_str) :])
 
 
-def process_file(infile, outfile, model, tokenizer, device, args):
+def process_file(infile, outfile, strip_existing, model, tokenizer, device, args):
     with open(infile, "r", encoding="utf-8") as f:
         json_str = f.read()
         obj = json5.loads(json_str)
 
     paths = list(get_defn_paths(obj))
+
+    # Strip existing descriptions if requested
+    if strip_existing:
+        obj = utils.strip_meta(obj, paths)
 
     # Erase the existing definition names before continuing
     temp_names = set()
@@ -364,6 +368,9 @@ def main():
     parser.add_argument("--output-mapping", default=False, action="store_true")
     parser.add_argument("--better-transformer", default=False, action="store_true")
     parser.add_argument("--skip-existing", default=False, action="store_true")
+    parser.add_argument(
+        "--no-strip-existing", dest="strip_existing", default=True, action="store_false"
+    )
     args = parser.parse_args()
 
     device = "cuda:0" if torch.cuda.is_available() and not args.cpu else "cpu"
@@ -416,7 +423,9 @@ def main():
     if os.path.isfile(args.input):
         if os.path.isdir(args.output):
             args.output = os.path.join(args.output, os.path.basename(args.input))
-        process_file(args.input, args.output, model, tokenizer, device, args)
+        process_file(
+            args.input, args.output, args.strip_existing, model, tokenizer, device, args
+        )
     elif os.path.isdir(args.input):
         for infile in tqdm(glob.glob(os.path.join(args.input, "*.json"))):
             # Skip any subdirectories
@@ -429,7 +438,9 @@ def main():
                 continue
 
             try:
-                process_file(infile, outfile, model, tokenizer, device, args)
+                process_file(
+                    infile, outfile, args.strip_existing, model, tokenizer, device, args
+                )
             except Exception as e:
                 sys.stderr.write(f"\nError processing {infile}: {e}\n")
 

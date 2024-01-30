@@ -19,7 +19,12 @@ from transformers import (
 )
 from auto_gptq import AutoGPTQForCausalLM
 
-from utils import strip_generated_code, InputOutputType, StringStoppingCriteria
+from utils import (
+    strip_meta,
+    strip_generated_code,
+    InputOutputType,
+    StringStoppingCriteria,
+)
 
 DESC_TAG = "!!!DESCRIPTION!!!"
 YARN_CMD = ["yarn", "run", "--silent", "--"]
@@ -175,11 +180,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
 
     # Strip existing descriptions if requested
     if args.strip_existing:
-        for path in paths:
-            desc_path = path.child(
-                jsonpath_ng.Fields("title", "description", "$comment")
-            )
-            obj = desc_path.filter(lambda _: True, obj)
+        obj = strip_meta(obj, paths)
 
     descriptions = {}
     for path in tqdm(paths, desc=os.path.basename(infile), leave=False):

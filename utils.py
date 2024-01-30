@@ -1,6 +1,7 @@
 import argparse
 import os
 
+import jsonpath_ng
 import torch
 from transformers import PreTrainedTokenizer, StoppingCriteria
 
@@ -80,3 +81,11 @@ class InputOutputType:
                     )
 
         return path
+
+
+def strip_meta(obj, paths):
+    for path in paths:
+        strip_path = path.child(jsonpath_ng.Fields("title", "description", "$comment"))
+        obj = strip_path.filter(lambda _: True, obj)
+
+    return obj
