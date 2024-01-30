@@ -71,7 +71,11 @@ def print_scores(header, metrics, scores, key):
             s[key].get(metric, {}).get(score_key, float("nan")) for s in scores
         ]
         filtered_scores = [s for s in score_values if not math.isnan(s)]
-        score = sum(filtered_scores) / len(filtered_scores)
+
+        if filtered_scores:
+            score = sum(filtered_scores) / len(filtered_scores)
+        else:
+            score = float("nan")
         print("  ", metric, ":", score)
 
 
