@@ -28,7 +28,7 @@ def split_token(token):
         return token.split("_")
     # Try splitting by hyphens
     elif "-" in token:
-        return token.split("_")
+        return token.split("-")
     # If camelCase, try splitting by capitals
     elif any(c in string.ascii_lowercase for c in token) and any(
         c in string.ascii_uppercase for c in token
