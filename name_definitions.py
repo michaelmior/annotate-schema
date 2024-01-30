@@ -57,7 +57,6 @@ def rename_key(old_name, new_name, reorder=False):
 
 
 def get_defn_paths(obj):
-    # Add descriptions to any top-level definitions
     def_keys = ["definitions", "$defs"]
     for def_key in def_keys:
         if def_key in obj:
@@ -333,7 +332,7 @@ def process_file(infile, outfile, model, tokenizer, device, args):
             defn_path.left, jsonpath_ng.Fields(defn_name)
         )
 
-    # Iterate through all the collected descriptions and update the object
+    # Iterate through all the collected definitions and update the object
     for defn_path, defn_name in defn_names.items():
         obj = defn_path.left.update_or_create(
             copy.deepcopy(obj), rename_key(str(defn_path.right), defn_name)
