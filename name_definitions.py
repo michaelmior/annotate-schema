@@ -15,7 +15,13 @@ import json5
 import jsonpath_ng
 import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, GenerationConfig, pipeline
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    GenerationConfig,
+    pipeline,
+)
 
 import utils
 
@@ -364,6 +370,8 @@ def main():
     )
     parser.add_argument("-m", "--model-name", default="neulab/codebert-javascript")
     parser.add_argument("-c", "--cpu", default=False, action="store_true")
+    parser.add_argument("-4", "--load-in-4bit", default=False, action="store_true")
+    parser.add_argument("-8", "--load-in-8bit", default=False, action="store_true")
     parser.add_argument("-k", "--keep-existing", default=False, action="store_true")
     parser.add_argument("--output-mapping", default=False, action="store_true")
     parser.add_argument("--better-transformer", default=False, action="store_true")
@@ -378,9 +386,17 @@ def main():
     # Load model
     sys.stderr.write("Loading model…\n")
 
+    # Construct the quantization configuration
+    qkwargs = {}
+    if args.load_in_4bit:
+        qkwargs["load_in_4bit"] = True
+    if args.load_in_8bit:
+        qkwargs["load_in_8bit"] = True
+    qconfig = BitsAndBytesConfig(**qkwargs)
+
     if args.model_name.startswith("facebook/incoder-"):
         # Add model-specific parameters
-        kwargs = {}
+        kwargs = {"quantization_config": qconfig}
 
         if args.model_name == "facebook/incoder-6B":
             kwargs["low_cpu_mem_usage"] = True
@@ -390,7 +406,7 @@ def main():
 
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name, trust_remote_code=True, device_map="auto", **kwargs
-        ).to(device)
+        )
 
         # Load tokenizer
         sys.stderr.write("Loading tokenizer…\n")
@@ -404,7 +420,8 @@ def main():
             args.model_name,
             trust_remote_code=True,
             device_map="auto",
-        ).to(device)
+            quantization_config=qconfig,
+        )
 
         # Load tokenizer
         sys.stderr.write("Loading tokenizer…\n")
@@ -412,8 +429,17 @@ def main():
             args.model_name, trust_remote_code=True, device_map="auto"
         )
     else:
+        if args.load_in_4bit or args.load_in_8bit:
+            raise argparse.ArgumentTypeError(
+                "quantization not supported for this model"
+            )
+
         model = pipeline("fill-mask", model=args.model_name, device=device)
         tokenizer = None
+
+    # If not using a quantized model, set to the correct device
+    if not args.load_in_4bit and not args.load_in_8bit:
+        model = model.to(device)
 
     # Convert to BetterTransformer
     if args.better_transformer:
