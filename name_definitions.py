@@ -441,6 +441,10 @@ def main():
     if not args.load_in_4bit and not args.load_in_8bit:
         model = model.to(device)
 
+    # Set the pad token if unspecified
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     # Convert to BetterTransformer
     if args.better_transformer:
         model = model.to_bettertransformer()
