@@ -273,7 +273,9 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
         output.flatten(), skip_special_tokens=True, clean_up_tokenization_spaces=False
     )
 
-    return utils.strip_generated_code(generated_code[len(defn_str) :])
+    return utils.strip_generated_code(
+        generated_code[generated_code.find(suffix) + len(suffix) :]
+    )
 
 
 def process_file(infile, outfile, strip_existing, model, tokenizer, device, args):
