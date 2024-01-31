@@ -253,26 +253,24 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
     # See https://huggingface.co/spaces/bigcode/bigcode-playground/blob/main/app.py
     prefix, suffix = defn_str.split(FIM_INDICATOR)
     defn_str = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
-    print(defn_str)
 
     # Encode the input and generate a description
-    x = tokenizer.encode(defn_str, return_tensors="pt").to(device)
-    y = model.generate(
-        x,
+    inputs = tokenizer(defn_str, return_tensors="pt").to(device)
+    output = model.generate(
+        **inputs,
         generation_config=GenerationConfig(
             do_sample=True,
             num_beams=3,
             max_new_tokens=50,
             pad_token_id=tokenizer.eos_token_id,
-            stopping_criteria=[utils.StringStoppingCriteria(tokenizer, len(x))],
+            stopping_criteria=[
+                utils.StringStoppingCriteria(tokenizer, len(inputs["input_ids"]))
+            ],
         ),
     )
     generated_code = tokenizer.decode(
-        y[0], skip_special_tokens=True, clean_up_tokenization_spaces=False
+        output.flatten(), skip_special_tokens=True, clean_up_tokenization_spaces=False
     )
-
-    y = model.generate(x)
-    generated_code = tokenizer.decode(y[0])
 
     return utils.strip_generated_code(generated_code[len(defn_str) :])
 
