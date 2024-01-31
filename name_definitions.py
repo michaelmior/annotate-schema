@@ -445,7 +445,7 @@ def main():
         model = model.to(device)
 
     # Set the pad token if unspecified
-    if tokenizer and tokenizer.pad_token is None:
+    if tokenizer and tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     # Convert to BetterTransformer
