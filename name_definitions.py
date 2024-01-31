@@ -20,6 +20,7 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
     GenerationConfig,
+    Pipeline,
     pipeline,
 )
 
@@ -436,11 +437,15 @@ def main():
         tokenizer = None
 
     # If not using a quantized model, set to the correct device
-    if not args.load_in_4bit and not args.load_in_8bit:
+    if (
+        not args.load_in_4bit
+        and not args.load_in_8bit
+        and not isinstance(model, Pipeline)
+    ):
         model = model.to(device)
 
     # Set the pad token if unspecified
-    if tokenizer.pad_token is None:
+    if tokenizer and tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     # Convert to BetterTransformer
