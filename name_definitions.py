@@ -13,6 +13,7 @@ import uuid
 
 import json5
 import jsonpath_ng
+import jsonpath_ng.ext
 import torch
 from tqdm import tqdm
 from transformers import (
@@ -36,6 +37,64 @@ FIM_PREFIX = "<fim_prefix>"
 FIM_MIDDLE = "<fim_middle>"
 FIM_SUFFIX = "<fim_suffix>"
 FIM_INDICATOR = "<FILL_HERE>"
+
+
+def get_all_refs(obj, ref, prefix=jsonpath_ng.Root()):
+    # Skip anything not a dictionary
+    if not isinstance(obj, dict):
+        return
+
+    if obj.get("$ref") == ref:
+        yield prefix
+        return
+
+    # Search any top-level definitions
+    def_keys = ["definitions", "$defs"]
+    for def_key in def_keys:
+        if isinstance(prefix, jsonpath_ng.Root) and def_key in obj:
+            for k, v in obj[def_key].items():
+                yield from get_all_refs(
+                    v,
+                    ref,
+                    jsonpath_ng.Child(
+                        prefix,
+                        jsonpath_ng.Child(
+                            jsonpath_ng.Fields(def_key), jsonpath_ng.Fields(k)
+                        ),
+                    ),
+                )
+
+    prop_keys = ["properties", "patternProperties", "additionalProperties"]
+    if obj.get("type") == "object":
+        for prop_key in prop_keys:
+            prop_obj = obj.get(prop_key, {})
+            # additionalProperties can be a Boolean, so we check
+            if not isinstance(prop_obj, dict):
+                continue
+
+            for k, v in prop_obj.items():
+                yield from get_all_refs(
+                    v,
+                    ref,
+                    jsonpath_ng.Child(
+                        prefix,
+                        jsonpath_ng.Child(
+                            jsonpath_ng.Fields(prop_key), jsonpath_ng.Fields(k)
+                        ),
+                    ),
+                )
+
+    for k in ("allOf", "anyOf", "oneOf"):
+        if k in obj:
+            for i, v in enumerate(obj[k]):
+                yield from get_all_refs(
+                    v,
+                    ref,
+                    jsonpath_ng.Child(
+                        prefix,
+                        jsonpath_ng.Child(jsonpath_ng.Fields(k), jsonpath_ng.Index(i)),
+                    ),
+                )
 
 
 def rename_key(old_name, new_name, reorder=False):
@@ -221,14 +280,27 @@ def replace_references(obj, old_path, new_path):
 
 
 def get_defn_template(schema, defn_path, token):
-    renamed_schema = defn_path.left.update_or_create(
-        copy.deepcopy(schema),
-        rename_key(str(defn_path.right), token, reorder=True),
-    )
-    defn = defn_path.left.find(renamed_schema)[0].value
+    # Get all references to this definition
+    refs = get_all_refs(schema, path_to_ref(defn_path))
 
-    # Dump the definition as JSON
-    return json.dumps({"definitions": defn}, indent=4)[:514]
+    # Build properties from the uses of the definition
+    props = {}
+    for r in refs:
+        key = str(r.right).split(".")[-1]
+        if key not in props:
+            # Make a copy and remove the reference
+            obj = copy.copy(r.find(schema)[0].value)
+            obj.pop("$ref")
+
+            props[key] = obj
+
+    return json.dumps(
+        {
+            "definitions": {token: defn_path.find(schema)[0].value},
+            "properties": props,
+        },
+        indent=4,
+    )[:514]
 
 
 def generate_defn_name(schema, defn_path, model, tokenizer, mask_token, device):
@@ -287,7 +359,7 @@ def process_file(infile, outfile, strip_existing, model, tokenizer, device, args
 
     # Strip existing descriptions if requested
     if strip_existing:
-        obj = utils.strip_meta(obj, paths)
+        obj = utils.strip_meta(obj, utils.get_all_paths(obj))
 
     # Erase the existing definition names before continuing
     temp_names = set()

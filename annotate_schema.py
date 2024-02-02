@@ -20,6 +20,7 @@ from transformers import (
 from auto_gptq import AutoGPTQForCausalLM
 
 from utils import (
+    get_all_paths,
     strip_meta,
     strip_generated_code,
     InputOutputType,
@@ -28,68 +29,6 @@ from utils import (
 
 DESC_TAG = "!!!DESCRIPTION!!!"
 YARN_CMD = ["yarn", "run", "--silent", "--"]
-
-
-def get_all_paths(obj, prefix=jsonpath_ng.Root()):
-    # Skip anything not a dictionary
-    if not isinstance(obj, dict):
-        return
-
-    # Add descriptions to any top-level definitions
-    def_keys = ["definitions", "$defs"]
-    for def_key in def_keys:
-        if isinstance(prefix, jsonpath_ng.Root) and def_key in obj:
-            for k, v in obj[def_key].items():
-                yield from get_all_paths(
-                    v,
-                    jsonpath_ng.Child(
-                        prefix,
-                        jsonpath_ng.Child(
-                            jsonpath_ng.Fields(def_key), jsonpath_ng.Fields(k)
-                        ),
-                    ),
-                )
-
-    prop_keys = ["properties", "patternProperties", "additionalProperties"]
-    if obj.get("type") == "object":
-        for prop_key in prop_keys:
-            prop_obj = obj.get(prop_key, {})
-            # additionalProperties can be a Boolean, so we check
-            if not isinstance(prop_obj, dict):
-                continue
-
-            for k, v in prop_obj.items():
-                yield from get_all_paths(
-                    v,
-                    jsonpath_ng.Child(
-                        prefix,
-                        jsonpath_ng.Child(
-                            jsonpath_ng.Fields(prop_key), jsonpath_ng.Fields(k)
-                        ),
-                    ),
-                )
-
-        yield prefix
-
-    elif obj.get("type") in ["integer", "string", "number", "boolean"] or "$ref" in obj:
-        yield prefix
-    elif obj.get("type") == "array" and "items" in obj:
-        yield prefix
-        yield from get_all_paths(
-            obj["items"], jsonpath_ng.Child(prefix, jsonpath_ng.Fields("items"))
-        )
-
-    for k in ("allOf", "anyOf", "oneOf"):
-        yield prefix
-        if k in obj:
-            for i, v in enumerate(obj[k]):
-                yield from get_all_paths(
-                    v,
-                    jsonpath_ng.Child(
-                        prefix,
-                        jsonpath_ng.Child(jsonpath_ng.Fields(k), jsonpath_ng.Index(i)),
-                    ),
-                )
 
 
 def convert_schema(obj, schema_type):
