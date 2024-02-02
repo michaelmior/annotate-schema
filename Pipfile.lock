@@ -1119,11 +1119,11 @@
         },
         "jsonpath-ng": {
             "hashes": [
-                "sha256:5483f8e9d74c39c9abfab554c070ae783c1c8cbadf5df60d561bc705ac68a07e",
-                "sha256:6fd04833412c4b3d9299edf369542f5e67095ca84efa17cbb7f06a34958adc9f"
+                "sha256:086c37ba4917304850bd837aeab806670224d3f038fe2833ff593a672ef0a5fa",
+                "sha256:8f22cd8273d7772eea9aaa84d922e0841aa36fdb8a2c6b7f6c3791a16a9bc0be"
             ],
             "index": "pypi",
-            "version": "==1.6.0"
+            "version": "==1.6.1"
         },
         "jsonschema": {
             "hashes": [
