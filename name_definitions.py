@@ -255,7 +255,7 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
     prefix, suffix = defn_str.split(FIM_INDICATOR)
     defn_str = f"{FIM_PREFIX}{prefix}{FIM_SUFFIX}{suffix}{FIM_MIDDLE}"
 
-    # Encode the input and generate a description
+    # Encode the input and generate a definition name
     inputs = tokenizer(defn_str, return_tensors="pt").to(device)
     output = model.generate(
         **inputs,
