@@ -534,6 +534,9 @@ def main():
             args.input, args.output, args.strip_existing, model, tokenizer, device, args
         )
     elif os.path.isdir(args.input):
+        # Generate the output directory if needed
+        os.makedirs(args.output, exist_ok=True)
+
         for infile in tqdm(glob.glob(os.path.join(args.input, "*.json"))):
             # Skip any subdirectories
             if os.path.isdir(infile):
