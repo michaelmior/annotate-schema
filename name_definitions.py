@@ -336,10 +336,10 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
             num_beams=3,
             max_new_tokens=50,
             pad_token_id=tokenizer.eos_token_id,
-            stopping_criteria=[
-                utils.StringStoppingCriteria(tokenizer, len(inputs["input_ids"]))
-            ],
         ),
+        stopping_criteria=[
+            utils.StringStoppingCriteria(tokenizer, len(inputs["input_ids"]))
+        ],
     )
     generated_code = tokenizer.decode(
         output.flatten(), skip_special_tokens=True, clean_up_tokenization_spaces=False
