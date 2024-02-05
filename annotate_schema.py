@@ -96,6 +96,7 @@ def generate_description(
         generation_config=GenerationConfig(
             do_sample=True,
             num_beams=num_beams,
+            top_p=0.9,
             max_new_tokens=50,
             pad_token_id=tokenizer.eos_token_id,
         ),
