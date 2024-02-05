@@ -321,7 +321,7 @@ def generate_defn_name(schema, defn_path, model, tokenizer, mask_token, device):
         return new_defn_name.strip()
 
 
-def infill_defn_name(schema, defn_path, model, tokenizer, device):
+def infill_defn_name(schema, defn_path, model, tokenizer, quote_token, device):
     defn_str = get_defn_template(schema, defn_path, FIM_INDICATOR)
     # See https://huggingface.co/spaces/bigcode/bigcode-playground/blob/main/app.py
     prefix, suffix = defn_str.split(FIM_INDICATOR)
@@ -337,9 +337,7 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
             max_new_tokens=50,
             pad_token_id=tokenizer.eos_token_id,
         ),
-        stopping_criteria=[
-            utils.StringStoppingCriteria(tokenizer, len(inputs["input_ids"]))
-        ],
+        suppress_tokens=[quote_token],
     )
     generated_code = tokenizer.decode(
         output.flatten(), skip_special_tokens=True, clean_up_tokenization_spaces=False
@@ -350,7 +348,9 @@ def infill_defn_name(schema, defn_path, model, tokenizer, device):
     )
 
 
-def process_file(infile, outfile, strip_existing, model, tokenizer, device, args):
+def process_file(
+    infile, outfile, strip_existing, model, tokenizer, quote_token, device, args
+):
     with open(infile, "r", encoding="utf-8") as f:
         json_str = f.read()
         obj = json5.loads(json_str)
@@ -387,7 +387,9 @@ def process_file(infile, outfile, strip_existing, model, tokenizer, device, args
     final_mapping = {}
     for defn_path in tqdm(paths, desc=os.path.basename(infile), leave=False):
         if args.model_name.startswith("bigcode/"):
-            defn_name = infill_defn_name(obj, defn_path, model, tokenizer, device)
+            defn_name = infill_defn_name(
+                obj, defn_path, model, tokenizer, quote_token, device
+            )
         else:
             if args.model_name.startswith("hf-internal-testing/"):
                 mask_token = "[MASK]"
@@ -522,6 +524,9 @@ def main():
     if tokenizer and tokenizer.pad_token_id is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    # Get quote token ID
+    quote_token = tokenizer.encode('"')[0]
+
     # Convert to BetterTransformer
     if args.better_transformer:
         model = model.to_bettertransformer()
@@ -531,7 +536,14 @@ def main():
         if os.path.isdir(args.output):
             args.output = os.path.join(args.output, os.path.basename(args.input))
         process_file(
-            args.input, args.output, args.strip_existing, model, tokenizer, device, args
+            args.input,
+            args.output,
+            args.strip_existing,
+            model,
+            tokenizer,
+            quote_token,
+            device,
+            args,
         )
     elif os.path.isdir(args.input):
         # Generate the output directory if needed
@@ -549,7 +561,14 @@ def main():
 
             try:
                 process_file(
-                    infile, outfile, args.strip_existing, model, tokenizer, device, args
+                    infile,
+                    outfile,
+                    args.strip_existing,
+                    model,
+                    tokenizer,
+                    quote_token,
+                    device,
+                    args,
                 )
             except Exception as e:
                 sys.stderr.write(f"\nError processing {infile}: {e}\n")
