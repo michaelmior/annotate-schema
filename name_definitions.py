@@ -37,6 +37,7 @@ FIM_PREFIX = "<fim_prefix>"
 FIM_MIDDLE = "<fim_middle>"
 FIM_SUFFIX = "<fim_suffix>"
 FIM_INDICATOR = "<FILL_HERE>"
+DISALLOWED_CHARS = '"{}\\:'
 
 
 def get_all_refs(obj, ref, prefix=jsonpath_ng.Root()):
@@ -537,7 +538,11 @@ def main():
 
     # Get tokens to suppress
     if tokenizer:
-        suppress_tokens = [t[0] for t in tokenizer(['"', '\\"'])["input_ids"]]
+        suppress_tokens = [
+            v
+            for (k, v) in tokenizer.vocab.items()
+            if any(c in DISALLOWED_CHARS for c in k) and v != tokenizer.all_special_ids
+        ]
     else:
         suppress_tokens = []
 
