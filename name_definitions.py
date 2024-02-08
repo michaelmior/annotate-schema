@@ -151,7 +151,7 @@ def generate(
     tokenizer,
     device,
     input: str,
-    max_to_generate: int = 128,
+    max_to_generate: int = 50,
     temperature: float = 0.2,
 ):
     """
@@ -170,7 +170,9 @@ def generate(
         output = model.generate(
             input_ids=input_ids,
             do_sample=True,
+            num_beams=3,
             top_p=0.95,
+            no_repeat_ngram_size=2,
             temperature=temperature,
             max_length=max_length,
         )
@@ -345,7 +347,7 @@ def infill_defn_name(schema, defn_path, model, tokenizer, suppress_tokens, devic
         generation_config=GenerationConfig(
             do_sample=True,
             num_beams=3,
-            top_p=0.9,
+            top_p=0.95,
             no_repeat_ngram_size=2,
             max_new_tokens=50,
             pad_token_id=tokenizer.eos_token_id,
