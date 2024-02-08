@@ -292,6 +292,10 @@ def get_defn_template(schema, defn_path, token):
     # Build properties from the uses of the definition
     props = {}
     for r in refs:
+        # Skip cases where the definition is used at the root
+        if isinstance(r, jsonpath_ng.Root):
+            continue
+
         key = str(r.right).split(".")[-1]
         if key not in props:
             # Make a copy and remove the reference
