@@ -537,7 +537,7 @@ def main():
 
     # Get tokens to suppress
     if tokenizer:
-        suppress_tokens = [tokenizer.encode('"')[0]]
+        suppress_tokens = [t[0] for t in tokenizer(['"', '\\"'])["input_ids"]]
     else:
         suppress_tokens = []
 
