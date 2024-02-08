@@ -112,27 +112,27 @@ def get_all_paths(obj, prefix=jsonpath_ng.Root()):
                 )
 
     prop_keys = ["properties", "patternProperties", "additionalProperties"]
-    if obj.get("type") == "object":
-        for prop_key in prop_keys:
-            prop_obj = obj.get(prop_key, {})
-            # additionalProperties can be a Boolean, so we check
-            if not isinstance(prop_obj, dict):
-                continue
+    for prop_key in prop_keys:
+        prop_obj = obj.get(prop_key, {})
+        # additionalProperties can be a Boolean, so we check
+        if not isinstance(prop_obj, dict):
+            continue
 
-            for k, v in prop_obj.items():
-                yield from get_all_paths(
-                    v,
+        for k, v in prop_obj.items():
+            yield from get_all_paths(
+                v,
+                jsonpath_ng.Child(
+                    prefix,
                     jsonpath_ng.Child(
-                        prefix,
-                        jsonpath_ng.Child(
-                            jsonpath_ng.Fields(prop_key), jsonpath_ng.Fields(k)
-                        ),
+                        jsonpath_ng.Fields(prop_key), jsonpath_ng.Fields(k)
                     ),
-                )
+                ),
+            )
 
-        yield prefix
-
-    elif obj.get("type") in ["integer", "string", "number", "boolean"] or "$ref" in obj:
+    if (
+        obj.get("type") in ["object", "integer", "string", "number", "boolean"]
+        or "$ref" in obj
+    ):
         yield prefix
     elif obj.get("type") == "array" and "items" in obj:
         yield prefix
