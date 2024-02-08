@@ -98,6 +98,12 @@ def get_all_refs(obj, ref, prefix=jsonpath_ng.Root()):
 
 
 def rename_key(old_name, new_name, reorder=False):
+    # Strip quotes for special characters in paths
+    #
+    # Note that this will probably break if there is a single
+    # quote in the path, but so far we have no examples of this.
+    old_name = old_name.strip("'")
+
     def rename_fn(_data_field, data, field):
         if reorder:
             # Shuffle the items since the order shouldn't matter anyway.
