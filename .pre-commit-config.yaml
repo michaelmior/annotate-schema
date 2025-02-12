@@ -25,4 +25,4 @@ repos:
       args: ["--verbose"]
     - id: check-jsonschema
       files: .github/dependabot.yml
-      args: ["--verbose", "--schemafile", "https://json.schemastore.org/dependabot-2.0.json"]
+      args: ["--verbose", "--schemafile", "https://raw.githubusercontent.com/SchemaStore/schemastore/refs/heads/master/src/schemas/json/dependabot-2.0.json"]
