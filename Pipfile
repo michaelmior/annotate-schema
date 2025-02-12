@@ -8,7 +8,7 @@ einops = "*"
 sentencepiece = "*"
 torch = "*"
 transformers = {extras = ["torch"], version = "*"}
-jsonpath-ng = "*"
+jsonpath-ng = "1.6.0"
 tqdm = "*"
 accelerate = "*"
 tiktoken = "*"
