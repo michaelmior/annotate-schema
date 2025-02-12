@@ -1878,14 +1878,6 @@
             "markers": "platform_system == 'Linux' and platform_machine == 'x86_64'",
             "version": "==12.1.105"
         },
-        "omegaconf": {
-            "hashes": [
-                "sha256:92ca535a788d21651bf4c2eaf5c1ca4c7a8003b2dab4a87cbb09109784268806",
-                "sha256:9e349fd76819b95b47aa628edea1ff83fed5b25108608abdd6c7fdca188e302a"
-            ],
-            "markers": "python_version >= '3.6'",
-            "version": "==2.0.6"
-        },
         "optimum": {
             "hashes": [
                 "sha256:2089bd73d1232686473a80effd53800f8a8c385c02126e80d35c07227c1b9bf5",
