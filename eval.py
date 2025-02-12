@@ -165,6 +165,6 @@ if __name__ == "__main__":
         ]
 
     if args.descriptions:
-        print_scores("Descriptions", scorers, scores, "desc")
+        print_scores("Descriptions", args.scorers, scores, "desc")
     if args.definitions:
-        print_scores("Definitions", scorers, scores, "defs")
+        print_scores("Definitions", args.scorers, scores, "defs")
