@@ -11,7 +11,6 @@ import torchmetrics
 from transformers import AutoModel, AutoTokenizer
 import wandb
 
-
 ALL_KEYWORDS = [
     "exclusiveMinimum",
     "exclusiveMaximum",
@@ -389,7 +388,7 @@ def run(training_data, validation_data, training_split, config=None):
 
         # Calculate validation loss and accuracy
         if val_data:
-            (val_loss, val_acc) = calc_val_stats(
+            val_loss, val_acc = calc_val_stats(
                 tinymodel, val_data, config["batch_size"], loss_fn, accuracy_fn
             )
             wandb.log({"val_loss": val_loss, "val_acc": val_acc})

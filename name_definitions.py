@@ -27,7 +27,6 @@ from transformers import (
 
 import utils
 
-
 # Uses code from https://github.com/dpfried/incoder/blob/main/example_usage.py
 
 SPLIT_TOKEN = "<|insert|>"
