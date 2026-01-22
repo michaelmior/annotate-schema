@@ -667,7 +667,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/graphlib-npm-2.1.8-9fab334669-1e0db4dea1.zip/node_modules/graphlib/",\
           "packageDependencies": [\
             ["graphlib", "npm:2.1.8"],\
-            ["lodash", "npm:4.17.21"]\
+            ["lodash", "npm:4.17.23"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -792,7 +792,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["commander", "npm:4.1.1"],\
             ["graphlib", "npm:2.1.8"],\
             ["js-yaml", "npm:3.14.2"],\
-            ["lodash", "npm:4.17.21"],\
+            ["lodash", "npm:4.17.23"],\
             ["native-promise-only", "npm:0.8.1"],\
             ["path-loader", "npm:1.0.12"],\
             ["slash", "npm:3.0.0"],\
@@ -815,7 +815,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["glob", "npm:7.2.3"],\
             ["glob-promise", "virtual:be6e50f9d5a22331d0e89f9b0ecb3f4e8f89dba22cc3247e09fdb1c69e2a1f52eedc2642c088ae905f450c2dc802ee6992d0582d420f0d6878b8a2654479c179#npm:4.2.2"],\
             ["is-glob", "npm:4.0.3"],\
-            ["lodash", "npm:4.17.21"],\
+            ["lodash", "npm:4.17.23"],\
             ["minimist", "npm:1.2.8"],\
             ["mkdirp", "npm:1.0.4"],\
             ["mz", "npm:2.7.0"],\
@@ -837,10 +837,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["lodash", [\
-        ["npm:4.17.21", {\
-          "packageLocation": "./.yarn/cache/lodash-npm-4.17.21-6382451519-eb835a2e51.zip/node_modules/lodash/",\
+        ["npm:4.17.23", {\
+          "packageLocation": "./.yarn/cache/lodash-npm-4.17.23-50bdb1c01a-7daad39758.zip/node_modules/lodash/",\
           "packageDependencies": [\
-            ["lodash", "npm:4.17.21"]\
+            ["lodash", "npm:4.17.23"]\
           ],\
           "linkType": "HARD"\
         }]\
