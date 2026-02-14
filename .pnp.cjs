@@ -526,7 +526,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["dezalgo", "npm:1.0.4"],\
             ["hexoid", "npm:1.0.0"],\
             ["once", "npm:1.4.0"],\
-            ["qs", "npm:6.14.1"]\
+            ["qs", "npm:6.14.2"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -1062,10 +1062,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["qs", [\
-        ["npm:6.14.1", {\
-          "packageLocation": "./.yarn/cache/qs-npm-6.14.1-2af4c28250-7fffab0344.zip/node_modules/qs/",\
+        ["npm:6.14.2", {\
+          "packageLocation": "./.yarn/cache/qs-npm-6.14.2-dc981e3564-e613d0b8d0.zip/node_modules/qs/",\
           "packageDependencies": [\
-            ["qs", "npm:6.14.1"],\
+            ["qs", "npm:6.14.2"],\
             ["side-channel", "npm:1.1.0"]\
           ],\
           "linkType": "HARD"\
@@ -1195,7 +1195,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["formidable", "npm:2.1.2"],\
             ["methods", "npm:1.1.2"],\
             ["mime", "npm:2.6.0"],\
-            ["qs", "npm:6.14.1"],\
+            ["qs", "npm:6.14.2"],\
             ["readable-stream", "npm:3.6.2"],\
             ["semver", "npm:7.5.4"]\
           ],\
