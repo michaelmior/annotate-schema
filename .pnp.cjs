@@ -505,14 +505,14 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["form-data", [\
-        ["npm:4.0.4", {\
-          "packageLocation": "./.yarn/cache/form-data-npm-4.0.4-10eb4ef9c3-9b7788836d.zip/node_modules/form-data/",\
+        ["npm:4.0.6", {\
+          "packageLocation": "./.yarn/cache/form-data-npm-4.0.6-fb3ea14cf3-e51b9e9767.zip/node_modules/form-data/",\
           "packageDependencies": [\
-            ["form-data", "npm:4.0.4"],\
+            ["form-data", "npm:4.0.6"],\
             ["asynckit", "npm:0.4.0"],\
             ["combined-stream", "npm:1.0.8"],\
             ["es-set-tostringtag", "npm:2.1.0"],\
-            ["hasown", "npm:2.0.2"],\
+            ["hasown", "npm:2.0.4"],\
             ["mime-types", "npm:2.1.35"]\
           ],\
           "linkType": "HARD"\
@@ -703,6 +703,14 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/hasown-npm-2.0.2-80fe6c9901-e8516f776a.zip/node_modules/hasown/",\
           "packageDependencies": [\
             ["hasown", "npm:2.0.2"],\
+            ["function-bind", "npm:1.1.2"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["npm:2.0.4", {\
+          "packageLocation": "./.yarn/cache/hasown-npm-2.0.4-75e16c9c2a-4bd8f916b6.zip/node_modules/hasown/",\
+          "packageDependencies": [\
+            ["hasown", "npm:2.0.4"],\
             ["function-bind", "npm:1.1.2"]\
           ],\
           "linkType": "HARD"\
@@ -1191,7 +1199,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["cookiejar", "npm:2.1.4"],\
             ["debug", "virtual:8f8391ba799998e895213c2d00517da7b56c99bbf83e1d724176c8efeeea601a543231fe47aef9073f5fa7a91b95dd149b52e026f9524983aec98034ab0a6025#npm:4.3.4"],\
             ["fast-safe-stringify", "npm:2.1.1"],\
-            ["form-data", "npm:4.0.4"],\
+            ["form-data", "npm:4.0.6"],\
             ["formidable", "npm:2.1.2"],\
             ["methods", "npm:1.1.2"],\
             ["mime", "npm:2.6.0"],\
