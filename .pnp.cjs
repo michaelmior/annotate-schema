@@ -774,10 +774,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["js-yaml", [\
-        ["npm:3.14.2", {\
-          "packageLocation": "./.yarn/cache/js-yaml-npm-3.14.2-debd9d20c3-626fc20773.zip/node_modules/js-yaml/",\
+        ["npm:3.15.0", {\
+          "packageLocation": "./.yarn/cache/js-yaml-npm-3.15.0-c152ef7c11-0209830c3c.zip/node_modules/js-yaml/",\
           "packageDependencies": [\
-            ["js-yaml", "npm:3.14.2"],\
+            ["js-yaml", "npm:3.15.0"],\
             ["argparse", "npm:1.0.10"],\
             ["esprima", "npm:4.0.1"]\
           ],\
@@ -799,7 +799,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["json-refs", "npm:3.0.15"],\
             ["commander", "npm:4.1.1"],\
             ["graphlib", "npm:2.1.8"],\
-            ["js-yaml", "npm:3.14.2"],\
+            ["js-yaml", "npm:3.15.0"],\
             ["lodash", "npm:4.18.1"],\
             ["native-promise-only", "npm:0.8.1"],\
             ["path-loader", "npm:1.0.12"],\
