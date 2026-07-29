@@ -8,7 +8,6 @@ import os
 import random
 import re
 import sys
-from typing import List
 import uuid
 
 import json5
@@ -161,9 +160,7 @@ def generate(
     max_length = max_to_generate + input_ids.flatten().size(0)
     if max_length > 2048:
         sys.stderr.write(
-            "warning: max_length {} is greater than the context window {}\n".format(
-                max_length, 2048
-            )
+            f"warning: max_length {max_length} is greater than the context window {2048}\n"
         )
     with torch.no_grad():
         output = model.generate(
@@ -180,8 +177,7 @@ def generate(
     detok_hypo_str = tokenizer.decode(
         output.flatten(), clean_up_tokenization_spaces=False
     )
-    if detok_hypo_str.startswith(BOS):
-        detok_hypo_str = detok_hypo_str[len(BOS) :]
+    detok_hypo_str = detok_hypo_str.removeprefix(BOS)
     return detok_hypo_str
 
 
@@ -189,7 +185,7 @@ def infill(
     model,
     tokenizer,
     device,
-    parts: List[str],
+    parts: list[str],
     max_to_generate: int = 128,
     temperature: float = 0.2,
     extra_sentinel: bool = True,
@@ -269,7 +265,7 @@ def infill(
 
 
 def path_to_ref(path):
-    return re.sub("^\$", "#", str(path)).replace(".", "/")
+    return re.sub(r"^\$", "#", str(path)).replace(".", "/")
 
 
 def replace_references(obj, old_path, new_path):

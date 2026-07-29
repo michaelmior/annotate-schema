@@ -8,8 +8,8 @@ import string
 
 import jsonpath_ng
 import nlgmetricverse
-from tqdm import tqdm
 import wordninja
+from tqdm import tqdm
 
 from annotate_schema import get_all_paths
 
