@@ -1,15 +1,14 @@
-from abc import ABC, abstractmethod
 import argparse
 import json
 import linecache
 import random
-from typing import Dict, List, Union
+from abc import ABC, abstractmethod
 
 import torch
-import tqdm
 import torchmetrics
-from transformers import AutoModel, AutoTokenizer
+import tqdm
 import wandb
+from transformers import AutoModel, AutoTokenizer
 
 ALL_KEYWORDS = [
     "exclusiveMinimum",
@@ -66,7 +65,7 @@ class BaseEncoder(torch.nn.Module, ABC):
     ):
         pass
 
-    def truncate_sentences(self, sentence_list: List[str]) -> List[str]:
+    def truncate_sentences(self, sentence_list: list[str]) -> list[str]:
         """Truncates list of sentences to a maximum length.
 
         Args:
@@ -113,7 +112,7 @@ class StarEncoder(BaseEncoder):
             device, max_input_len, maximum_token_len, model_name="bigcode/starencoder"
         )
 
-    def set_device(self, inputs: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def set_device(self, inputs: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
         output_data = {}
         for k, v in inputs.items():
             output_data[k] = v.to(self.device)
@@ -145,7 +144,7 @@ class StarEncoder(BaseEncoder):
         features_sequence: torch.Tensor,
         attention_masks: torch.Tensor,
         return_norms: bool = False,
-    ) -> Union[torch.Tensor, List[torch.Tensor]]:
+    ) -> torch.Tensor | list[torch.Tensor]:
         """Temporal pooling of sequences of vectors and projection onto the unit sphere.
 
         Args:
@@ -236,7 +235,7 @@ class FileDataset(torch.utils.data.Dataset):
 
 class TinyModel(torch.nn.Module):
     def __init__(self, config):
-        super(TinyModel, self).__init__()
+        super().__init__()
 
         # Input size is embedding dimension (768)
         # plus one-hot encoding of keywords

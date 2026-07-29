@@ -10,6 +10,7 @@ import json5
 import jsonpath_ng
 import peft
 import torch
+from auto_gptq import AutoGPTQForCausalLM
 from tqdm import tqdm
 from transformers import (
     AutoModelForCausalLM,
@@ -17,14 +18,13 @@ from transformers import (
     BitsAndBytesConfig,
     GenerationConfig,
 )
-from auto_gptq import AutoGPTQForCausalLM
 
 from utils import (
-    get_all_paths,
-    strip_meta,
-    strip_generated_code,
     InputOutputType,
     StringStoppingCriteria,
+    get_all_paths,
+    strip_generated_code,
+    strip_meta,
 )
 
 DESC_TAG = "!!!DESCRIPTION!!!"
