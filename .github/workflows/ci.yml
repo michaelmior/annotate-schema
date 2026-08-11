@@ -17,7 +17,7 @@ jobs:
         run: pipenv install --dev
       - name: Enable Corepack
         run: corepack enable
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '18'
           cache: 'yarn'
