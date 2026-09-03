@@ -526,7 +526,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["dezalgo", "npm:1.0.4"],\
             ["hexoid", "npm:1.0.0"],\
             ["once", "npm:1.4.0"],\
-            ["qs", "npm:6.15.2"]\
+            ["qs", "npm:6.16.0"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -1070,11 +1070,12 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["qs", [\
-        ["npm:6.15.2", {\
-          "packageLocation": "./.yarn/cache/qs-npm-6.15.2-4fbd3d7cd4-135ae673e6.zip/node_modules/qs/",\
+        ["npm:6.16.0", {\
+          "packageLocation": "./.yarn/cache/qs-npm-6.16.0-160b61647c-fb97665d1b.zip/node_modules/qs/",\
           "packageDependencies": [\
-            ["qs", "npm:6.15.2"],\
-            ["side-channel", "npm:1.1.0"]\
+            ["qs", "npm:6.16.0"],\
+            ["es-define-property", "npm:1.0.1"],\
+            ["side-channel", "npm:1.1.1"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -1111,13 +1112,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["side-channel", [\
-        ["npm:1.1.0", {\
-          "packageLocation": "./.yarn/cache/side-channel-npm-1.1.0-4993930974-bf73d6d668.zip/node_modules/side-channel/",\
+        ["npm:1.1.1", {\
+          "packageLocation": "./.yarn/cache/side-channel-npm-1.1.1-3d97a5a6fb-e0f217140c.zip/node_modules/side-channel/",\
           "packageDependencies": [\
-            ["side-channel", "npm:1.1.0"],\
+            ["side-channel", "npm:1.1.1"],\
             ["es-errors", "npm:1.3.0"],\
             ["object-inspect", "npm:1.13.4"],\
-            ["side-channel-list", "npm:1.0.0"],\
+            ["side-channel-list", "npm:1.0.1"],\
             ["side-channel-map", "npm:1.0.1"],\
             ["side-channel-weakmap", "npm:1.0.2"]\
           ],\
@@ -1125,10 +1126,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["side-channel-list", [\
-        ["npm:1.0.0", {\
-          "packageLocation": "./.yarn/cache/side-channel-list-npm-1.0.0-14f74146d1-603b928997.zip/node_modules/side-channel-list/",\
+        ["npm:1.0.1", {\
+          "packageLocation": "./.yarn/cache/side-channel-list-npm-1.0.1-7a0802d399-3499671cd5.zip/node_modules/side-channel-list/",\
           "packageDependencies": [\
-            ["side-channel-list", "npm:1.0.0"],\
+            ["side-channel-list", "npm:1.0.1"],\
             ["es-errors", "npm:1.3.0"],\
             ["object-inspect", "npm:1.13.4"]\
           ],\
@@ -1203,7 +1204,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["formidable", "npm:2.1.2"],\
             ["methods", "npm:1.1.2"],\
             ["mime", "npm:2.6.0"],\
-            ["qs", "npm:6.15.2"],\
+            ["qs", "npm:6.16.0"],\
             ["readable-stream", "npm:3.6.2"],\
             ["semver", "npm:7.5.4"]\
           ],\
