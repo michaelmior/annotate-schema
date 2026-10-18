@@ -195,10 +195,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["brace-expansion", [\
-        ["npm:1.1.18", {\
-          "packageLocation": "./.yarn/cache/brace-expansion-npm-1.1.18-2759b99171-aa84023a41.zip/node_modules/brace-expansion/",\
+        ["npm:1.1.21", {\
+          "packageLocation": "./.yarn/cache/brace-expansion-npm-1.1.21-0c6e278ea9-b841b4198a.zip/node_modules/brace-expansion/",\
           "packageDependencies": [\
-            ["brace-expansion", "npm:1.1.18"],\
+            ["brace-expansion", "npm:1.1.21"],\
             ["balanced-match", "npm:1.0.2"],\
             ["concat-map", "npm:0.0.1"]\
           ],\
@@ -941,7 +941,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/minimatch-npm-3.1.4-5c2bfccba3-8bc9993c9b.zip/node_modules/minimatch/",\
           "packageDependencies": [\
             ["minimatch", "npm:3.1.4"],\
-            ["brace-expansion", "npm:1.1.18"]\
+            ["brace-expansion", "npm:1.1.21"]\
           ],\
           "linkType": "HARD"\
         }]\
